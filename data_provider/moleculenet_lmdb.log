@@ -1,0 +1,299 @@
+[INFO] 저장 경로  : /workspace/DATASET/MoleculeNet
+==================================================
+dataset : muv (1 / 11) 처리 중
+Step 1: PyG `MoleculeNet` dataset 생성
+==================== Validate ====================
+항목    :   GT   |  PyG
+# Tasks :   17   |   17
+# Data  : 93087  | 93087Step 2: LMDB 생성
+[INFO] LMDB 경로   : /workspace/DATASET/MoleculeNet/muv/processed/lmdb
+[INFO] LMDB path '/workspace/DATASET/MoleculeNet/muv/processed/lmdb' already exists. Skipping LMDB creation.
+[INFO] Skipping write operation because LMDB already exists.
+[DONE] LMDB 저장 완료. 소요 시간: 0.00분
+==================================================
+dataset : hiv (2 / 11) 처리 중
+Step 1: PyG `MoleculeNet` dataset 생성
+==================== Validate ====================항목    :   GT   |  PyG
+# Tasks :   1    |   1
+# Data  : 41127  | 41127
+Step 2: LMDB 생성
+[INFO] LMDB 경로   : /workspace/DATASET/MoleculeNet/hiv/processed/lmdb
+[INFO] LMDB path '/workspace/DATASET/MoleculeNet/hiv/processed/lmdb' already exists. Skipping LMDB creation.
+[INFO] Skipping write operation because LMDB already exists.
+[DONE] LMDB 저장 완료. 소요 시간: 0.00분
+==================================================dataset : bace (3 / 11) 처리 중
+Step 1: PyG `MoleculeNet` dataset 생성
+==================== Validate ====================
+항목    :   GT   |  PyG
+# Tasks :   1    |   1
+# Data  :  1513  |  1513
+Step 2: LMDB 생성
+[INFO] LMDB 경로   : /workspace/DATASET/MoleculeNet/bace/processed/lmdb
+[INFO] LMDB path '/workspace/DATASET/MoleculeNet/bace/processed/lmdb' already exists. Skipping LMDB creation.[INFO] Skipping write operation because LMDB already exists.
+[DONE] LMDB 저장 완료. 소요 시간: 0.00분
+==================================================
+dataset : bbbp (4 / 11) 처리 중
+Step 1: PyG `MoleculeNet` dataset 생성
+==================== Validate ====================
+항목    :   GT   |  PyG
+# Tasks :   1    |   1
+# Data  :  2039  |  2039Step 2: LMDB 생성
+[INFO] LMDB 경로   : /workspace/DATASET/MoleculeNet/bbbp/processed/lmdb
+[INFO] LMDB path '/workspace/DATASET/MoleculeNet/bbbp/processed/lmdb' already exists. Skipping LMDB creation.
+[INFO] Skipping write operation because LMDB already exists.
+[DONE] LMDB 저장 완료. 소요 시간: 0.00분
+==================================================
+dataset : tox21 (5 / 11) 처리 중
+Step 1: PyG `MoleculeNet` dataset 생성
+==================== Validate ====================
+항목    :   GT   |  PyG
+# Tasks :   12   |   12
+# Data  :  7831  |  7831
+Step 2: LMDB 생성
+[INFO] LMDB 경로   : /workspace/DATASET/MoleculeNet/tox21/processed/lmdb
+[INFO] LMDB path '/workspace/DATASET/MoleculeNet/tox21/processed/lmdb' already exists. Skipping LMDB creation.
+[INFO] Skipping write operation because LMDB already exists.
+[DONE] LMDB 저장 완료. 소요 시간: 0.00분
+==================================================
+dataset : toxcast (6 / 11) 처리 중
+Step 1: PyG `MoleculeNet` dataset 생성
+==================== Validate ====================
+항목    :   GT   |  PyG
+# Tasks :  617   |  617
+# Data  :  8577  |  8577
+Step 2: LMDB 생성
+[INFO] LMDB 경로   : /workspace/DATASET/MoleculeNet/toxcast/processed/lmdb
+[INFO] LMDB path '/workspace/DATASET/MoleculeNet/toxcast/processed/lmdb' already exists. Skipping LMDB creation.
+[INFO] Skipping write operation because LMDB already exists.
+[DONE] LMDB 저장 완료. 소요 시간: 0.00분
+==================================================
+dataset : sider (7 / 11) 처리 중
+Step 1: PyG `MoleculeNet` dataset 생성
+==================== Validate ====================
+항목    :   GT   |  PyG
+# Tasks :   27   |   27
+# Data  :  1427  |  1427
+Step 2: LMDB 생성
+[INFO] LMDB 경로   : /workspace/DATASET/MoleculeNet/sider/processed/lmdb
+[INFO] LMDB path '/workspace/DATASET/MoleculeNet/sider/processed/lmdb' already exists. Skipping LMDB creation.
+[INFO] Skipping write operation because LMDB already exists.
+[DONE] LMDB 저장 완료. 소요 시간: 0.00분
+==================================================
+dataset : clintox (8 / 11) 처리 중
+Step 1: PyG `MoleculeNet` dataset 생성
+==================== Validate ====================
+항목    :   GT   |  PyG
+# Tasks :   2    |   2
+# Data  :  1478  |  1478
+Step 2: LMDB 생성
+[INFO] LMDB 경로   : /workspace/DATASET/MoleculeNet/clintox/processed/lmdb
+[INFO] LMDB path '/workspace/DATASET/MoleculeNet/clintox/processed/lmdb' already exists. Skipping LMDB creation.
+[INFO] Skipping write operation because LMDB already exists.
+[DONE] LMDB 저장 완료. 소요 시간: 0.00분
+==================================================
+dataset : esol (9 / 11) 처리 중
+Step 1: PyG `MoleculeNet` dataset 생성
+==================== Validate ====================
+항목    :   GT   |  PyG
+# Tasks :   1    |   1
+# Data  :  1128  |  1128
+Step 2: LMDB 생성
+[INFO] LMDB 경로   : /workspace/DATASET/MoleculeNet/esol/processed/lmdb
+[INFO] LMDB path '/workspace/DATASET/MoleculeNet/esol/processed/lmdb' already exists. Skipping LMDB creation.
+[INFO] Skipping write operation because LMDB already exists.
+[DONE] LMDB 저장 완료. 소요 시간: 0.00분
+==================================================
+dataset : freesolv (10 / 11) 처리 중
+Step 1: PyG `MoleculeNet` dataset 생성
+==================== Validate ====================
+항목    :   GT   |  PyG
+# Tasks :   1    |   1
+# Data  :  642   |  642
+Step 2: LMDB 생성
+[INFO] LMDB 경로   : /workspace/DATASET/MoleculeNet/freesolv/processed/lmdb
+[INFO] LMDB path '/workspace/DATASET/MoleculeNet/freesolv/processed/lmdb' already exists. Skipping LMDB creation.
+[INFO] Skipping write operation because LMDB already exists.
+[DONE] LMDB 저장 완료. 소요 시간: 0.00분
+==================================================
+dataset : lipo (11 / 11) 처리 중
+Step 1: PyG `MoleculeNet` dataset 생성
+==================== Validate ====================
+항목    :   GT   |  PyG
+# Tasks :   1    |   1
+# Data  :  4200  |  4200
+Step 2: LMDB 생성
+[INFO] LMDB 경로   : /workspace/DATASET/MoleculeNet/lipo/processed/lmdb
+[INFO] LMDB path '/workspace/DATASET/MoleculeNet/lipo/processed/lmdb' already exists. Skipping LMDB creation.
+[INFO] Skipping write operation because LMDB already exists.
+[DONE] LMDB 저장 완료. 소요 시간: 0.00분
+[DONE] 모두 저장 완료. 소요 시간: 0.00분
+==================================================
+
+=================== Test Load ====================
+dataset : muv
+==================== Validate ====================
+  항목  :   GT   |  LMDB
+# Tasks :   17   |   17
+# Data  : 93087  | 93087
+Data(x=[26, 9], edge_index=[2, 60], y=[1, 17], edge_vec=[60, 3], edge_len=[60], num_nodes=26, smiles='Cc1cccc(N2CCN(C(=O)C34CC5CC(CC(C5)C3)C4)CC2)c1C', coord_method='ETKDG', aug_index=0)
+소요 시간: 0.0013816356658935547초
+=================== Test Load ====================
+dataset : hiv
+==================== Validate ====================
+  항목  :   GT   |  LMDB
+# Tasks :   1    |   1
+# Data  : 41127  | 41127
+Data(x=[19, 9], edge_index=[2, 40], y=[1, 1], edge_vec=[40, 3], edge_len=[40], num_nodes=19, smiles='CCC1=[O+][Cu-3]2([O+]=C(CC)C1)[O+]=C(CC)CC(CC)=[O+]2', coord_method='ETKDG', aug_index=0)
+소요 시간: 0.0013151168823242188초
+=================== Test Load ====================
+dataset : bace
+==================== Validate ====================
+  항목  :   GT   |  LMDB
+# Tasks :   1    |   1
+# Data  :  1513  |  1513
+Data(x=[32, 9], edge_index=[2, 70], y=[1, 1], edge_vec=[70, 3], edge_len=[70], num_nodes=32, smiles='O1CC[C@@H](NC(=O)[C@@H](Cc2cc3cc(ccc3nc2N)-c2ccccc2C)C)CC1(C)C', coord_method='ETKDG', aug_index=0)
+소요 시간: 0.0011110305786132812초
+=================== Test Load ====================
+dataset : bbbp
+==================== Validate ====================
+  항목  :   GT   |  LMDB
+# Tasks :   1    |   1
+# Data  :  2039  |  2039
+Data(x=[20, 9], edge_index=[2, 40], y=[1, 1], edge_vec=[40, 3], edge_len=[40], num_nodes=20, smiles='[Cl].CC(C)NCC(O)COc1cccc2ccccc12', coord_method='ETKDG', aug_index=0)
+소요 시간: 0.0010488033294677734초
+=================== Test Load ====================
+dataset : tox21
+==================== Validate ====================
+  항목  :   GT   |  LMDB
+# Tasks :   12   |   12
+# Data  :  7831  |  7831
+Data(x=[16, 9], edge_index=[2, 34], y=[1, 12], edge_vec=[34, 3], edge_len=[34], num_nodes=16, smiles='CCOc1ccc2nc(S(N)(=O)=O)sc2c1', coord_method='ETKDG', aug_index=0)
+소요 시간: 0.0010495185852050781초
+=================== Test Load ====================
+dataset : toxcast
+==================== Validate ====================
+  항목  :   GT   |  LMDB
+# Tasks :  617   |  617
+# Data  :  8577  |  8577
+Data(x=[10, 9], edge_index=[2, 20], y=[1, 617], edge_vec=[20, 3], edge_len=[20], num_nodes=10, smiles='[O-][N+](=O)C1=CC=C(Cl)C=C1', coord_method='ETKDG', aug_index=0)
+소요 시간: 0.0010797977447509766초
+=================== Test Load ====================
+dataset : sider
+==================== Validate ====================
+  항목  :   GT   |  LMDB
+# Tasks :   27   |   27
+# Data  :  1427  |  1427
+Data(x=[13, 9], edge_index=[2, 24], y=[1, 27], edge_vec=[24, 3], edge_len=[24], num_nodes=13, smiles='C(CNCCNCCNCCN)N', coord_method='ETKDG', aug_index=0)
+소요 시간: 0.001041412353515625초
+=================== Test Load ====================
+dataset : clintox
+==================== Validate ====================
+  항목  :   GT   |  LMDB
+# Tasks :   2    |   2
+# Data  :  1478  |  1478
+Data(x=[24, 9], edge_index=[2, 46], y=[1, 2], edge_vec=[46, 3], edge_len=[46], num_nodes=24, smiles='*C(=O)[C@H](CCCCNC(=O)OCCOC)NC(=O)OCCOC', coord_method='ETKDG', aug_index=0)
+소요 시간: 0.0011811256408691406초
+=================== Test Load ====================
+dataset : esol
+==================== Validate ====================
+  항목  :   GT   |  LMDB
+# Tasks :   1    |   1
+# Data  :  1128  |  1128
+Data(x=[32, 9], edge_index=[2, 68], y=[1, 1], edge_vec=[68, 3], edge_len=[68], num_nodes=32, smiles='OCC3OC(OCC2OC(OC(C#N)c1ccccc1)C(O)C(O)C2O)C(O)C(O)C3O ', coord_method='ETKDG', aug_index=0)
+소요 시간: 0.001047372817993164초
+=================== Test Load ====================
+dataset : freesolv
+==================== Validate ====================
+  항목  :   GT   |  LMDB
+# Tasks :   1    |   1
+# Data  :  642   |  642
+Data(x=[13, 9], edge_index=[2, 26], y=[1, 1], edge_vec=[26, 3], edge_len=[26], num_nodes=13, smiles='CN(C)C(=O)c1ccc(cc1)OC', coord_method='ETKDG', aug_index=0)
+소요 시간: 0.0010538101196289062초
+=================== Test Load ====================
+dataset : lipo
+==================== Validate ====================
+  항목  :   GT   |  LMDB
+# Tasks :   1    |   1
+# Data  :  4200  |  4200
+Data(x=[24, 9], edge_index=[2, 54], y=[1, 1], edge_vec=[54, 3], edge_len=[54], num_nodes=24, smiles='Cn1c(CN2CCN(CC2)c3ccc(Cl)cc3)nc4ccccc14', coord_method='ETKDG', aug_index=0)
+소요 시간: 0.0010542869567871094초
+
+================================================================================
+아래는 jupyter에서 각각의 split 기준에 따라 어떻게 split 되는지 적어둔 거임
+Split을 어떻게 하는지는 `./moleculenet_split.png` 참고
+================================================================================
+
+Processing muv...
+[DEBUG] Using random split
+[DEBUG] num_train, num_valid, num_test = 74469, 9308, 9310 (80.00%: 10.00%: 10.00%)
+[DEBUG] Train ∩ Valid = 0, Train ∩ Test = 0, Valid ∩ Test = 0
+[DEBUG] Train ∪ Valid ∪ Test = 93087, len(dataset) = 93087
+
+Processing hiv...
+[DEBUG] Using scaffold split
+[DEBUG] num_scaffolds: 19089
+[DEBUG] max index in split: 41126
+[DEBUG] split lengths → train: 15270, val: 1907, test: 23950
+[DEBUG] num_train, num_valid, num_test = 15270, 1907, 23950 (37.13%: 4.64%: 58.23%)
+[DEBUG] Train ∩ Valid = 0, Train ∩ Test = 0, Valid ∩ Test = 0
+[DEBUG] Train ∪ Valid ∪ Test = 41127, len(dataset) = 41127
+
+Processing bace...
+[DEBUG] Using scaffold split
+[DEBUG] num_scaffolds: 738
+[DEBUG] max index in split: 1512
+[DEBUG] split lengths → train: 589, val: 75, test: 849
+[DEBUG] num_train, num_valid, num_test = 589, 75, 849 (38.93%: 4.96%: 56.11%)
+[DEBUG] Train ∩ Valid = 0, Train ∩ Test = 0, Valid ∩ Test = 0
+[DEBUG] Train ∪ Valid ∪ Test = 1513, len(dataset) = 1513
+
+Processing bbbp...
+[DEBUG] Using scaffold split
+[DEBUG] num_scaffolds: 1102
+[DEBUG] max index in split: 2038
+[DEBUG] split lengths → train: 878, val: 109, test: 1052
+[DEBUG] num_train, num_valid, num_test = 878, 109, 1052 (43.06%: 5.35%: 51.59%)
+[DEBUG] Train ∩ Valid = 0, Train ∩ Test = 0, Valid ∩ Test = 0
+[DEBUG] Train ∪ Valid ∪ Test = 2039, len(dataset) = 2039
+
+Processing tox21...
+[DEBUG] Using random split
+[DEBUG] num_train, num_valid, num_test = 6264, 783, 784 (79.99%: 10.00%: 10.01%)
+[DEBUG] Train ∩ Valid = 0, Train ∩ Test = 0, Valid ∩ Test = 0
+[DEBUG] Train ∪ Valid ∪ Test = 7831, len(dataset) = 7831
+
+Processing toxcast...
+[DEBUG] Using random split
+[DEBUG] num_train, num_valid, num_test = 6861, 857, 859 (79.99%: 9.99%: 10.02%)
+[DEBUG] Train ∩ Valid = 0, Train ∩ Test = 0, Valid ∩ Test = 0
+[DEBUG] Train ∪ Valid ∪ Test = 8577, len(dataset) = 8577
+
+Processing sider...
+[DEBUG] Using random split
+[DEBUG] num_train, num_valid, num_test = 1141, 142, 144 (79.96%: 9.95%: 10.09%)
+[DEBUG] Train ∩ Valid = 0, Train ∩ Test = 0, Valid ∩ Test = 0
+[DEBUG] Train ∪ Valid ∪ Test = 1427, len(dataset) = 1427
+
+Processing clintox...
+[DEBUG] Using random split
+[DEBUG] num_train, num_valid, num_test = 1182, 147, 149 (79.97%: 9.95%: 10.08%)
+[DEBUG] Train ∩ Valid = 0, Train ∩ Test = 0, Valid ∩ Test = 0
+[DEBUG] Train ∪ Valid ∪ Test = 1478, len(dataset) = 1478
+
+Processing esol...
+[DEBUG] Using random split
+[DEBUG] num_train, num_valid, num_test = 902, 112, 114 (79.96%: 9.93%: 10.11%)
+[DEBUG] Train ∩ Valid = 0, Train ∩ Test = 0, Valid ∩ Test = 0
+[DEBUG] Train ∪ Valid ∪ Test = 1128, len(dataset) = 1128
+
+Processing freesolv...
+[DEBUG] Using random split
+[DEBUG] num_train, num_valid, num_test = 513, 64, 65 (79.91%: 9.97%: 10.12%)
+[DEBUG] Train ∩ Valid = 0, Train ∩ Test = 0, Valid ∩ Test = 0
+[DEBUG] Train ∪ Valid ∪ Test = 642, len(dataset) = 642
+
+Processing lipo...
+[DEBUG] Using random split
+[DEBUG] num_train, num_valid, num_test = 3360, 420, 420 (80.00%: 10.00%: 10.00%)
+[DEBUG] Train ∩ Valid = 0, Train ∩ Test = 0, Valid ∩ Test = 0
+[DEBUG] Train ∪ Valid ∪ Test = 4200, len(dataset) = 4200
