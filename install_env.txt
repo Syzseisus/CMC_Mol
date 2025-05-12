@@ -1,0 +1,21 @@
+# Create venv with python=3.10
+conda create -n mol_pl python=3.10 cudatoolkit=11.8 -y
+conda activate mol_pl
+
+# install torch sth
+pip install torch==2.1.0 torchvision==0.16.0 torchaudio==2.1.0 --index-url https://download.pytorch.org/whl/cu118
+pip install pytorch-lightning==2.2.1
+pip install torch_geometric
+pip install pyg_lib torch_scatter torch_sparse torch_cluster torch_spline_conv -f https://data.pyg.org/whl/torch-2.1.0+cu118.html
+
+# Uni-Core
+cd Uni-Core
+pip install numpy==1.24.4
+pip install -e .
+
+# Etc.
+pip install wandb tqdm lmdb
+
+# 분자 관련 라이브러리 - version에 주의
+pip install rdkit==2022.9.5
+pip install ogb==1.2.0
