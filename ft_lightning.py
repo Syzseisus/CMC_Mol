@@ -1,5 +1,6 @@
 import os
 import wandb
+import numpy as np
 
 import torch
 import pytorch_lightning as pl
@@ -71,16 +72,43 @@ def main(args, categories):
 
     # ===== Test =====
     print(f"{' LAST ':=^50}")
-    trainer.test(ckpt_path="last", datamodule=dm)
+    last_results = trainer.test(ckpt_path="last", datamodule=dm)
     print(f"{' BEST ':=^50}")
-    trainer.test(ckpt_path="best", datamodule=dm)
+    best_results = trainer.test(ckpt_path="best", datamodule=dm)
+
+    return last_results, best_results
 
 
 if __name__ == "__main__":
     args, categories = get_args_ft()
+
+    # 결과를 저장할 리스트
+    all_last_results = []
+    all_best_results = []
+
     for k in range(args.k_fold):
         args.fold = k
         categories.setdefault("Experiment Meta", []).extend(["seed"])
         print(f"\n===== Fold {k} / {args.k_fold} =====")
 
-        main(args, categories)
+        last_results, best_results = main(args, categories)
+        all_last_results.append(last_results)
+        all_best_results.append(best_results)
+
+    # 전체 폴드의 평균 계산
+    print(f"\n{' FINAL RESULTS ':=^50}")
+    print("Last checkpoint results:")
+    for metric in all_last_results[0][0].keys():
+        if metric.startswith("test/"):
+            values = [result[0][metric] for result in all_last_results]
+            mean_value = np.mean(values)
+            std_value = np.std(values)
+            print(f"{metric}: {mean_value:.4f} ± {std_value:.4f}")
+
+    print("\nBest checkpoint results:")
+    for metric in all_best_results[0][0].keys():
+        if metric.startswith("test/"):
+            values = [result[0][metric] for result in all_best_results]
+            mean_value = np.mean(values)
+            std_value = np.std(values)
+            print(f"{metric}: {mean_value:.4f} ± {std_value:.4f}")
