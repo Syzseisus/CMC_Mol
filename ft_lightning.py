@@ -1,4 +1,5 @@
 import os
+import json
 import wandb
 import numpy as np
 
@@ -112,3 +113,23 @@ if __name__ == "__main__":
             mean_value = np.mean(values)
             std_value = np.std(values)
             print(f"{metric}: {mean_value:.4f} ± {std_value:.4f}")
+
+    # json 저장 인자가 있으면 저장
+    if hasattr(args, "save_metrics_json") and args.save_metrics_json:
+        result_dict = {}
+
+        # 각 메트릭에 대한 결과 처리
+        for metric in all_last_results[0][0]:
+            if metric.startswith("test/"):
+                # 기존 전체 평균
+                last_values = [res[0][metric] for res in all_last_results]
+                result_dict[f"last/{metric}"] = float(np.mean(last_values))
+
+        for metric in all_best_results[0][0]:
+            if metric.startswith("test/"):
+                # 기존 전체 평균
+                best_values = [res[0][metric] for res in all_best_results]
+                result_dict[f"best/{metric}"] = float(np.mean(best_values))
+
+        with open(args.save_metrics_json, "w") as f:
+            json.dump(result_dict, f, indent=2)
