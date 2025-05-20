@@ -115,6 +115,7 @@ class FTModule(LightningModule):
     def on_validation_epoch_end(self):
         metric = self.valid_metric_fn.compute()
         self.log(f"valid/{self.metric_name}", metric, **self.metric_log_kwargs)
+        self.log(f"valid_{self.metric_name}", metric, prog_bar=False, **self.valid_log_kwargs)
 
     def on_test_epoch_start(self):
         self.test_metric_fn.reset()

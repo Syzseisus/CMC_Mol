@@ -41,7 +41,7 @@ def main(args, categories):
         metric = "AUROC"
         mode = "max"
     checkpoint = ModelCheckpoint(
-        monitor=f"valid/{metric}",
+        monitor=f"valid_{metric}",
         mode=mode,
         save_top_k=args.top_k,
         save_last=True,
