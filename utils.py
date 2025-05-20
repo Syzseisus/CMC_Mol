@@ -156,10 +156,10 @@ def get_args():
     # fmt: off
     # === Project Config ===
     add = add_arg_group(parser, "Project Config", categories)
-    add("--project", type=str, default="cmc_atom")
-    add("--save_dir", type=str, default="../save")
-    add("--ckpt_folder", type=str, default="checkpoints")
-    add("--log_folder", type=str, default="log")
+    add("--project", type=str, default="cmc_atom", help="WandB project name")
+    add("--save_dir", type=str, default="../save", help="Path to save checkpoints and logs")
+    add("--ckpt_folder", type=str, default="checkpoints", help="Directory name where saving checkpoints : ckpt_dir = save_dir/project/\{now\}/ckpt_folder")
+    add("--log_folder", type=str, default="log", help="Directory name where saving logs : log_dir = save_dir/project/\{now\}/log_folder")
     add("--seed", type=int, default=1013, help="Random seed")
 
     # === Optimization / Training Hyperparameters ===
@@ -242,8 +242,8 @@ def get_args_ft():
     # === Optimization / Training Hyperparameters ===
     add = add_arg_group(parser, "Optimization / Training Hyperparameters", categories)
     add("--max_epochs", type=int, default=50, help="Number of training epochs")
-    add("--batch_size", type=int, default=512, help="Batch size")
-    add("--num_workers", type=int, default=4, help="Number of worker processes for DataLoader")
+    add("--batch_size", type=int, default=256, help="Batch size")
+    add("--num_workers", type=int, default=8, help="Number of worker processes for DataLoader")
     add("--prefetch_factor", type=int, default=2, help="Number of worker processes for DataLoader")
     add("--lr", type=float, default=5e-3, help="Learning rate")
     add("--wd", type=float, default=5e-5, help="Weight decay")
