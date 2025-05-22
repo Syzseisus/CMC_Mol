@@ -258,6 +258,7 @@ def get_args_ft():
     add("--alpha", type=float, default=0.01, help="Scale factor to apply to each unit vector")
     add("--limit", type=int, default=None, help="Limit number of data samples")
     add("--target", type=str, default=None, help="Only for QM8 and QM9. Target name")
+    add("--split_strat", type=str, default="default", choices=["default", "force_scaffold", "force_random"], help="Split strategy : default (default) or force scaffold/random")
 
     # === Trainer / Logging / Callback Config ===
     add = add_arg_group(parser, "Trainer / Logging / Callback Config", categories)

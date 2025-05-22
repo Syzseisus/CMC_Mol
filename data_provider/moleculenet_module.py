@@ -32,16 +32,25 @@ class MoleculeNetDataModule(LightningDataModule):
             full_dataset = Subset(full_dataset, range(self.args.limit))
 
         # Split 방법은 `./data_provider/moleculenet_split.png` 참고
-        method = METHOD[self.dataset_name].lower()
+        original_method = METHOD[self.dataset_name].lower()
+        if self.args.split_strat == "default":
+            method = original_method
+        elif self.args.split_strat == "force_scaffold":
+            method = "scaffold"
+        elif self.args.split_strat == "force_random":
+            method = "random"
+        else:
+            raise NotImplementedError(f"Invalid split strategy: {self.args.split_strat}")
+
         if method == "scaffold":
-            train_idx, val_idx, test_idx = scaffold_split(full_dataset, seed=self.args.seed + self.args.fold)
+            train_idx, valid_idx, test_idx = scaffold_split(full_dataset, seed=self.args.seed + self.args.fold)
         elif method == "random":
-            train_idx, val_idx, test_idx = random_split(full_dataset, seed=self.args.seed + self.args.fold)
+            train_idx, valid_idx, test_idx = random_split(full_dataset, seed=self.args.seed + self.args.fold)
         else:
             raise NotImplementedError(f"Invalid split method: {method}")
 
         self.train_dataset = Subset(full_dataset, train_idx)
-        self.valid_dataset = Subset(full_dataset, val_idx)
+        self.valid_dataset = Subset(full_dataset, valid_idx)
         self.test_dataset = Subset(full_dataset, test_idx)
 
     def train_dataloader(self):
