@@ -50,12 +50,21 @@ class MoleculeNetDataModule(LightningDataModule):
         else:
             raise NotImplementedError(f"Invalid split strategy: {self.args.split_strat}")
 
-        if method == "scaffold":
-            train_idx, valid_idx, test_idx = scaffold_split(full_dataset, seed=self.args.seed + self.args.fold)
-        elif method == "random":
-            train_idx, valid_idx, test_idx = random_split(full_dataset, seed=self.args.seed + self.args.fold)
+        max_retry = 10
+        for attempt in range(max_retry):
+            current_seed = self.args.seed + self.args.fold + attempt
+            if method == "scaffold":
+                train_idx, valid_idx, test_idx = scaffold_split(full_dataset, seed=current_seed)
+            elif method == "random":
+                train_idx, valid_idx, test_idx = random_split(full_dataset, seed=current_seed)
+            else:
+                raise NotImplementedError(f"Invalid split method: {method}")
+
+            print(f"[DEBUG] split attempt {attempt}: train={len(train_idx)}, val={len(valid_idx)}, test={len(test_idx)}")  # fmt: skip
+            if len(train_idx) > 0 and len(valid_idx) > 0 and len(test_idx) > 0:
+                break
         else:
-            raise NotImplementedError(f"Invalid split method: {method}")
+            raise RuntimeError("Failed to split dataset")
 
         self.train_dataset = Subset(full_dataset, train_idx)
         self.valid_dataset = Subset(full_dataset, valid_idx)
