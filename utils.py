@@ -301,7 +301,7 @@ def get_args_ft():
         args.now = broadcast_str(args.now)
 
     # === Structure output directories
-    args.save_dir = os.path.join(args.save_dir, args.project, args.now)
+    args.save_dir = os.path.join(args.save_dir, args.project, f"{args.now}_{args.dataset_name}")
     args.ckpt_dir = os.path.join(args.save_dir, args.ckpt_folder)
     args.log_dir = os.path.join(args.save_dir, args.log_folder)
     args.lmdb_path = os.path.join(args.root, args.dataset_name, "processed", "lmdb")
