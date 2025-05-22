@@ -45,6 +45,8 @@ class SSLModule(LightningModule):
         self.log("valid/total", loss, batch_size=batch.num_graphs, prog_bar=True, **self.val_log_kwargs)
         self.log("valid/atom", loss_atom, batch_size=batch.num_graphs, **self.val_log_kwargs)
         self.log("valid/dist", loss_dist, batch_size=batch.num_graphs, **self.val_log_kwargs)
+        # for monitoring
+        self.log("valid_total", loss, batch_size=batch.num_graphs, **self.val_log_kwargs)
 
     def configure_optimizers(self):
         optimizer = torch.optim.AdamW(self.parameters(), lr=self.args.lr, weight_decay=self.args.wd)

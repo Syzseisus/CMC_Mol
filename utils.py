@@ -10,24 +10,10 @@ import torch
 import torch.distributed as dist
 from torch.utils.data.dataset import Subset
 from torch.utils.data import Dataset, random_split
-from pytorch_lightning.callbacks import ModelCheckpoint
 from torch_geometric.data import Dataset as PyG_Dataset
 
 from models.modules import PROJ_MAP, FUSION_MAP, SCALAR_MAP, VECTOR_MAP
 from data_provider.moleculenet_stats import TASK_TYPE, REGRESSION, CLASSIFICATION
-
-
-class SafeFilenameModelCheckpoint(ModelCheckpoint):
-    """
-    WandB에 카테고리 만드려면 `valid/total`과 같이 해야됨.
-    근데 그렇다고 `filename="{epoch}-{valid_total:.4f}",`과 같이 설정하면 경로(/)가 되어버림.
-    그래서 파일이름에는 "/"를 "_"로 변경해주는 클래스 새로 만듦.
-    """
-
-    def format_checkpoint_name(self, epoch, logs=None):
-        if logs is not None and "valid/total" in logs:
-            logs["valid_total"] = logs["valid/total"]
-        return super().format_checkpoint_name(epoch, logs)
 
 
 def split_dataset(dataset: Union[PyG_Dataset, Dataset], split: Union[float, Sequence[float]]) -> List[Subset]:

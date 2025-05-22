@@ -6,11 +6,11 @@ import pytorch_lightning as pl
 from pytorch_lightning import Trainer
 from pytorch_lightning.loggers import WandbLogger
 from pytorch_lightning.strategies import DDPStrategy
-from pytorch_lightning.callbacks import EarlyStopping, LearningRateMonitor
+from pytorch_lightning.callbacks import ModelCheckpoint, LearningRateMonitor
 
+from utils import get_args, format_args
 from models.ssl_lightning_module import SSLModule
 from data_provider.pcqm4mv2_module import PCQM4MV2DM
-from utils import SafeFilenameModelCheckpoint, get_args, format_args
 
 os.environ["OMP_NUM_THREADS"] = "1"  # RDKit 안정화
 torch.set_num_threads(1)  # CPU 연산 겹침 방지
@@ -38,19 +38,12 @@ def main(args, categories):
     wandb_logger = WandbLogger(project=args.project, save_dir=args.log_dir)
 
     # ===== Callbacks =====
-    early_stop = EarlyStopping(
-        monitor="valid/total",
+    checkpoint = ModelCheckpoint(
+        monitor="valid_total",
         mode="min",
-        patience=args.patience,
-        verbose=True,
-        log_rank_zero_only=True,
-    )
-    checkpoint = SafeFilenameModelCheckpoint(
-        monitor="valid/total",
-        mode="min",
-        save_top_k=args.top_k,
         save_last=True,
         filename="{epoch}-{valid_total:.4f}",
+        every_n_epochs=10,
         dirpath=args.ckpt_dir,
     )
     lr_monitor = LearningRateMonitor(logging_interval="step")
@@ -65,7 +58,7 @@ def main(args, categories):
         max_epochs=args.max_epochs,
         logger=wandb_logger,
         log_every_n_steps=args.log_every_n_steps,
-        callbacks=[early_stop, checkpoint, lr_monitor],
+        callbacks=[checkpoint, lr_monitor],
         # num_sanity_val_steps=0,
     )
 
