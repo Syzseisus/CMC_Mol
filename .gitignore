@@ -1,5 +1,7 @@
-*run_all_moleculenet_logs_*/**
+/**/*run*/**
 /**/__pycache__/**
 /**/*gs*/**
 /**/*.sh
+todo.md
+/**/*.ipynb
 !run_all_moleculenet.sh
