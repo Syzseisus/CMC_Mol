@@ -26,7 +26,15 @@ class MoleculeNetDataModule(LightningDataModule):
             timeout=0,
         )
 
+        self.train_dataset = None
+        self.valid_dataset = None
+        self.test_dataset = None
+
     def setup(self, stage=None):
+        if self.train_dataset:
+            # 한 번 한 split을 유지함
+            return
+
         full_dataset = MoleculeNet_LMDBDataset(self.lmdb_path, self.dataset_name)
         if self.args.limit:
             full_dataset = Subset(full_dataset, range(self.args.limit))
