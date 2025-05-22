@@ -14,19 +14,23 @@ class FTModule(LightningModule):
         self.args = args
         self.save_hyperparameters(args)
         self.model = CrossModalFT(args)
-        tmp = torch.load(args.pretrain_ckpt)["state_dict"]
-        ckpt = {}
-        for k, v in tmp.items():
-            if "mask" in k or "head_atom" in k or "head_dist" in k:
-                continue
-            if "model" in k:
-                ckpt[k[6:]] = v
-            else:
-                ckpt[k] = v
-        self.model.load_state_dict(ckpt)
-        if self.args.freeze_pt:  # 정리하면서 추가한 거라 기존 파일에서 확인 불가 ..
-            for p in self.model.parameters():
-                p.requires_grad_(False)
+        if args.pretrain_ckpt != "random_init":
+            print(f"{' Load pre-trained model parameters. ':=^80}")
+            tmp = torch.load(args.pretrain_ckpt)["state_dict"]
+            ckpt = {}
+            for k, v in tmp.items():
+                if "mask" in k or "head_atom" in k or "head_dist" in k:
+                    continue
+                if "model" in k:
+                    ckpt[k[6:]] = v
+                else:
+                    ckpt[k] = v
+            self.model.load_state_dict(ckpt)
+            if self.args.freeze_pt:
+                for p in self.model.parameters():
+                    p.requires_grad_(False)
+        else:
+            print(f"{' Randomly initialize the model parameters. ':=^80}")
         self.fusion_head = build_modular_head(args, self.args.num_classes)
         if self.args.task_type == "regression":
             assert self.args.num_classes == 1, f"I got 'regression' as a `task_type`, but multiple `num_classes`."
