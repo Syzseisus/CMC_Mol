@@ -91,6 +91,26 @@ class LinearScalar(nn.Module):
 
 
 # === Fusion Operations ===
+class Only2D(nn.Module):
+    def __init__(self, d_s_emb: int, d_v_emb: int, d_f: int):
+        super().__init__()
+        assert d_s_emb == d_f, f"`d_s_emb` and `d_f` must match in `Only2D` (Got s={d_s_emb}, f={d_f})"
+        self.out_dim = d_f
+
+    def forward(self, s_emb: torch.Tensor, v_emb: torch.Tensor) -> torch.Tensor:
+        return s_emb
+
+
+class Only3D(nn.Module):
+    def __init__(self, d_s_emb: int, d_v_emb: int, d_f: int):
+        super().__init__()
+        assert d_v_emb == d_f, f"`d_v_emb` and `d_f` must match in `Only3D` (Got v={d_v_emb}, f={d_f})"
+        self.out_dim = d_f
+
+    def forward(self, s_emb: torch.Tensor, v_emb: torch.Tensor) -> torch.Tensor:
+        return v_emb
+
+
 class SumFusionOp(nn.Module):
     def __init__(self, d_s_emb: int, d_v_emb: int, d_f: int):
         super().__init__()
@@ -183,6 +203,9 @@ class FusionHead(nn.Module):
         self.fusion = fusion_cls(self.s_proc.emb_dim, self.v_proc.emb_dim, d_f)
         self.proj = proj_cls(self.fusion.out_dim, d_f)
 
+        if "only" in fusion_cls.__name__.lower():
+            print(f"{f' Ablation: {fusion_cls.__name__} ':=^80}")
+
         if read_out == "mean":
             self.pool = global_mean_pool
         elif read_out == "attn":
@@ -222,6 +245,10 @@ FUSION_MAP = {
     "concat": ConcatFusionOp,  # torch.cat([s, v], dim=-1)
     "attn": AttnFusionOp,  # g = MLP(torch.cat([s, v], dim=-1))
     "gate": GateFusionOp,  # t = torch.stack([s, v], dim=1); ATTN(t, t, t).sum(dim=1)
+    # for ablation
+    "2d_only": Only2D,  # s -> Identity -> (N, d_f). `s`'s shape should be (N, d_f)
+    "3d_only": Only3D,  # v -> Identity -> (N, d_f). `v`'s shape should be (N, d_f)
+    "simple_mlp": ConcatFusionOp,  # torch.cat([s, v], dim=-1) -> linear -> (N, d_f)
 }
 
 # 4. Project Operation
