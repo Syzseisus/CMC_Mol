@@ -1,5 +1,6 @@
 import os
 import json
+import time
 import wandb
 import numpy as np
 
@@ -87,6 +88,8 @@ if __name__ == "__main__":
     all_last_results = []
     all_best_results = []
 
+    # 시간 로깅
+    start_time = time.time()
     for k in range(args.k_fold):
         args.fold = k
         categories.setdefault("Experiment Meta", []).extend(["seed"])
@@ -95,6 +98,15 @@ if __name__ == "__main__":
         last_results, best_results = main(args, categories)
         all_last_results.append(last_results)
         all_best_results.append(best_results)
+
+        # 시간 로깅
+        end_time = time.time()
+        elapsed_time = end_time - start_time
+        hours = int(elapsed_time // 3600)
+        minutes = int((elapsed_time % 3600) // 60)
+        seconds = int(elapsed_time % 60)
+        print(f"{f' Fold {k} took {hours:02d}:{minutes:02d}:{seconds:02d} ':=^80}")
+        start_time = time.time()  # Reset timer for next fold
 
     # 전체 폴드의 평균 계산
     print(f"\n{' FINAL RESULTS ':=^50}")
