@@ -69,16 +69,24 @@ def main(args, categories):
     if int(os.environ.get("LOCAL_RANK", 0)) == 0:
         wandb.termlog(format_args(args, categories))
 
-    # ===== Training =====
-    trainer.fit(model, datamodule=dm)
+    if args.zero_shot:
+        # ===== Zero-shot Test =====
+        print(f"{' ZERO-SHOT ':=^50}")
+        results = trainer.test(model, datamodule=dm)
 
-    # ===== Test =====
-    print(f"{' LAST ':=^50}")
-    last_results = trainer.test(ckpt_path="last", datamodule=dm)
-    print(f"{' BEST ':=^50}")
-    best_results = trainer.test(ckpt_path="best", datamodule=dm)
+        # Return same result for both last and best since no training
+        return results, results
+    else:
+        # ===== Training =====
+        trainer.fit(model, datamodule=dm)
 
-    return last_results, best_results
+        # ===== Test =====
+        print(f"{' LAST ':=^50}")
+        last_results = trainer.test(ckpt_path="last", datamodule=dm)
+        print(f"{' BEST ':=^50}")
+        best_results = trainer.test(ckpt_path="best", datamodule=dm)
+
+        return last_results, best_results
 
 
 if __name__ == "__main__":

@@ -238,6 +238,7 @@ def get_args_ft():
     add("--pretrain_ckpt", type=str, required=True)
     add("--k_fold", type=int, default=5, help="Number of K-Folds")
     add("--save_metrics_json", type=str, default=None, help="Path to save aggregated K-Fold metrics as JSON")
+    add("--zero_shot", action="store_true", default=False, help="Zero-shot test")
 
     # === Optimization / Training Hyperparameters ===
     add = add_arg_group(parser, "Optimization / Training Hyperparameters", categories)
