@@ -52,6 +52,7 @@ def key_split_indexes(keys, key_lengths=None, rng=None):
 
 def scaffold_split(dataset, seed=42):
     """Return train/valid/test index lists with scaffold-aware splitting."""
+    print(f"{' Scaffold Split Debugging ':=^80}")
     # print(f"[DEBUG] dataset length: {len(dataset)}")
     # for i in range(len(dataset)):
     #     print(f"[DEBUG] trying idx {i}")
@@ -70,7 +71,7 @@ def scaffold_split(dataset, seed=42):
     keys = torch.tensor(keys)
     unique_keys = torch.unique(keys)
     num_scaffolds = len(unique_keys)
-    print(f"[DEBUG] num_scaffolds: {num_scaffolds}")
+    print(f'{f" [DEBUG] num_scaffolds: {num_scaffolds} ":^80}')
 
     # Fixed split ratio: 80% train, 10% valid, 10% test
     num_train = int(0.8 * num_scaffolds)
@@ -80,13 +81,20 @@ def scaffold_split(dataset, seed=42):
 
     train_idx, valid_idx, test_idx = key_split_indexes(keys, key_lengths=key_lengths, rng=rng)
     all_indices = train_idx + valid_idx + test_idx
-    print(f"[DEBUG] max index in split: {max(all_indices)}")
-    print(f"[DEBUG] split lengths → train: {len(train_idx)}, val: {len(valid_idx)}, test: {len(test_idx)}")
+    print(f'{f" [DEBUG] max index in split: {max(all_indices)} ":^80}')
+    print(f'{f" [DEBUG] split lengths → train: {len(train_idx)}, val: {len(valid_idx)}, test: {len(test_idx)} ":^80}')
+    len_all = len(train_idx) + len(valid_idx) + len(test_idx)
+    assert len_all == len(dataset), f"SPLIT ERROR: {len(train_idx)} + {len(valid_idx)} + {len(test_idx)} != {len(dataset)}"  # fmt: skip
+    print(f'{f" [DEBUG] {len(train_idx)} + {len(valid_idx)} + {len(test_idx)} == {len(dataset)} ":^80}')
+    print("=" * 80)
 
     return train_idx, valid_idx, test_idx
 
 
 def random_split(dataset, seed=42):
+    """Return train/valid/test index lists with random splitting - 8:1:1 fixed ratio."""
+    print(f"{' Random Split Debugging ':=^80}")
+
     rng = torch.Generator().manual_seed(seed)
     indices = torch.randperm(len(dataset), generator=rng).tolist()
 
@@ -96,7 +104,13 @@ def random_split(dataset, seed=42):
     n_val = int(n * 0.1)
 
     train_idx = indices[:n_train]
-    val_idx = indices[n_train : n_train + n_val]
+    valid_idx = indices[n_train : n_train + n_val]
     test_idx = indices[n_train + n_val :]
+    print(f'{f" [DEBUG] split lengths → train: {len(train_idx)}, val: {len(valid_idx)}, test: {len(test_idx)} ":^80}')
+    len_all = len(train_idx) + len(valid_idx) + len(test_idx)
+    assert len_all == len(dataset), f"SPLIT ERROR: {len(train_idx)} + {len(valid_idx)} + {len(test_idx)} != {len(dataset)}"  # fmt: skip
+    print(f'{f" [DEBUG] {len(train_idx)} + {len(valid_idx)} + {len(test_idx)} == {len(dataset)} ":^80}')
+    print(f'{f" [DEBUG] {len(train_idx)} / {len(dataset)} ~= {n_train / n:.2f} ":^80}')
+    print("=" * 80)
 
-    return train_idx, val_idx, test_idx
+    return train_idx, valid_idx, test_idx

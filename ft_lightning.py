@@ -93,7 +93,7 @@ if __name__ == "__main__":
     for k in range(args.k_fold):
         args.fold = k
         categories.setdefault("Experiment Meta", []).extend(["seed"])
-        print(f"\n===== Fold {k} / {args.k_fold} =====")
+        print(f"\n{f' Fold {k} / {args.k_fold} ':=^80}")
 
         last_results, best_results = main(args, categories)
         all_last_results.append(last_results)
@@ -109,7 +109,7 @@ if __name__ == "__main__":
         start_time = time.time()  # Reset timer for next fold
 
     # 전체 폴드의 평균 계산
-    print(f"\n{' FINAL RESULTS ':=^50}")
+    print(f"\n{' AVERAGE RESULTS ':=^80}")
     print("Last checkpoint results:")
     for metric in all_last_results[0][0].keys():
         if metric.startswith("test/"):
@@ -125,6 +125,7 @@ if __name__ == "__main__":
             mean_value = np.mean(values)
             std_value = np.std(values)
             print(f"{metric}: {mean_value:.4f} ± {std_value:.4f}")
+    print("=" * 80)
 
     # json 저장 인자가 있으면 저장
     if hasattr(args, "save_metrics_json") and args.save_metrics_json:
@@ -145,3 +146,4 @@ if __name__ == "__main__":
 
         with open(args.save_metrics_json, "w") as f:
             json.dump(result_dict, f, indent=2)
+        print(f"{f' Save results to {args.save_metrics_json} ':=^80}")
