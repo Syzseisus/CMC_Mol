@@ -45,7 +45,7 @@ def main(args, categories):
         mode=mode,
         save_top_k=args.top_k,
         save_last=True,
-        filename="{epoch}-{valid_total:.4f}",
+        filename="{epoch}-{valid_" + metric + ":.4f}",
         dirpath=args.ckpt_dir,
     )
     lr_monitor = LearningRateMonitor(logging_interval="step")
