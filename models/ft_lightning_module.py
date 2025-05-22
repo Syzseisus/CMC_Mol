@@ -118,6 +118,7 @@ class FTModule(LightningModule):
 
     def on_validation_epoch_end(self):
         metric = self.valid_metric_fn.compute()
+        print(f"[DEBUG] validation {self.metric_name}: {metric}")
         self.log(f"valid/{self.metric_name}", metric, **self.metric_log_kwargs)
         self.log(f"valid_{self.metric_name}", metric, prog_bar=False, **self.valid_log_kwargs)
 

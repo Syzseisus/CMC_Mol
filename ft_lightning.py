@@ -61,9 +61,7 @@ def main(args, categories):
         logger=wandb_logger,
         log_every_n_steps=args.log_every_n_steps,
         callbacks=[checkpoint, lr_monitor],
-        # 시작 전에 validiation 돌려서 검증하는 건데,
-        # 어차피 돌아가는 코드니까 `=0` 해놓고 바로 train 들어감
-        num_sanity_val_steps=0,
+        num_sanity_val_steps=1,  # validation monitor 잘 되도록
     )
 
     if int(os.environ.get("LOCAL_RANK", 0)) == 0:
