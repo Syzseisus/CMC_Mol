@@ -53,8 +53,8 @@ def main(args, categories):
     trainer = Trainer(
         accelerator="gpu" if num_devices > 0 else "cpu",
         devices=num_devices if num_devices > 0 else 1,
-        # strategy="ddp" if num_devices > 1 else "auto",
-        strategy=DDPStrategy(find_unused_parameters=True),  # IDK.....
+        strategy="ddp" if num_devices > 1 else "auto",
+        # strategy=DDPStrategy(find_unused_parameters=True),
         max_epochs=args.max_epochs,
         logger=wandb_logger,
         log_every_n_steps=args.log_every_n_steps,
