@@ -61,7 +61,46 @@ def get_2d_features(mol):
     return x, edge_index
 
 
+def random_mask_atom(x, ratio):
+    """Mask non-carbon atoms first, then mask carbon atoms if needed."""
+    assert x.shape[0] > 0, "x must have at least one atom"
+    assert x.shape[1] == 9, "x must have 9 features"
+    assert all(a in range(1, 119) for a in x[:, 0]), "x must have atomic number between 1 and 118"
+
+    # Identify C and non-C atom positions
+    length = x.shape[0]
+    atom_num = x[:, 0]
+    idx_non_c = (atom_num != 6).nonzero(as_tuple=True)[0]
+    idx_c = (atom_num == 6).nonzero(as_tuple=True)[0]
+
+    # Init mask
+    num_mask = max(1, int(length * ratio))
+    num_non_c = idx_non_c.shape[0]
+    mask = torch.zeros(length, dtype=torch.bool)
+
+    # Mask separately for non-C and C atoms
+    if num_non_c >= num_mask:
+        # Randomly mask only among non-C atoms
+        perm = torch.randperm(num_non_c)
+        mask[idx_non_c[perm[:num_mask]]] = True
+    else:
+        # Mask all non-C atoms,
+        # then randomly mask C atoms for the remainder
+        mask[idx_non_c] = True
+        num_remaining = num_mask - num_non_c
+        if num_remaining > 0 and idx_c.numel() > 0:
+            perm = torch.randperm(idx_c.shape[0])
+            mask[idx_c[perm[:num_remaining]]] = True
+
+    return mask
+
+
 def random_mask(length: int, ratio: float):
+    if ratio == 0:
+        print("[WARNING] Given ratio is 0, returning all False mask")
+        return torch.zeros(length, dtype=torch.bool)
+    assert length > 0, "Length must be greater than 0"
+
     num_mask = max(1, int(length * ratio))
     mask = torch.zeros(length, dtype=torch.bool)
     perm = torch.randperm(length)
@@ -69,8 +108,11 @@ def random_mask(length: int, ratio: float):
     return mask
 
 
-def apply_mask(data: Data, ratio: float = 0.15):
-    data.mask_atom = random_mask(data.num_nodes, ratio)
+def apply_mask(data: Data, ratio: float = 0.15, mask_atom_strat: str = "random"):
+    if mask_atom_strat == "anti_c_dominant":
+        data.mask_atom = random_mask_atom(data.x, ratio)
+    elif mask_atom_strat == "random":
+        data.mask_atom = random_mask(data.num_nodes, ratio)
     data.mask_edge = random_mask(data.edge_index.shape[1], ratio)
     return data
 
