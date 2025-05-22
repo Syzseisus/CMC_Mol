@@ -1,4 +1,5 @@
 import os
+import json
 import wandb
 
 import torch
@@ -67,6 +68,39 @@ def main(args, categories):
 
     # ===== Training =====
     trainer.fit(model, datamodule=dm)
+
+    # ===== logging =====
+    # 마지막 에폭 정보
+    last_epoch = trainer.current_epoch
+    last_train_loss = trainer.callback_metrics.get("train/total", None)
+    last_valid_loss = trainer.callback_metrics.get("valid/total", None)
+
+    # best ckpt 기준 정보
+    best_score = checkpoint.best_model_score  # usually val_loss
+
+    # best 에폭을 추정할 수 있는 경우
+    best_epoch = getattr(checkpoint, "best_model_epoch", None)  # Lightning >=2.1
+
+    # summary 딕셔너리 구성
+    summary = {
+        "pretrain/epoch": last_epoch,
+        "pretrain/train_loss": float(last_train_loss) if last_train_loss else None,
+        "pretrain/valid_loss": float(last_valid_loss) if last_valid_loss else None,
+        "pretrain/best_epoch": best_epoch,
+        "pretrain/best_valid_loss": float(best_score) if best_score else None,
+    }
+
+    # args에 들어있는 하이퍼파라미터 저장
+    for k in ["lr", "wd", "lambda_dist", "d_scalar", "d_vector", "num_layers"]:
+        v = getattr(args, k, None)
+        if v is not None:
+            summary[f"hparam/{k}"] = v
+
+    # 결과 저장
+    summary_path = os.path.join(args.save_dir, "pretrain", "summary.json")
+    os.makedirs(os.path.dirname(summary_path), exist_ok=True)
+    with open(summary_path, "w") as f:
+        json.dump(summary, f, indent=2)
 
 
 if __name__ == "__main__":
