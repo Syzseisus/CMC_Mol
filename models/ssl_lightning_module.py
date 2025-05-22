@@ -28,7 +28,7 @@ class SSLModule(LightningModule):
         pred_dist = self.head_dist(s, batch.edge_index)
         loss_atom = F.cross_entropy(pred_atoms[batch.mask_atom], batch.target_atom[batch.mask_atom])
         loss_dist = F.l1_loss(pred_dist[batch.mask_edge], batch.target_edge_len[batch.mask_edge])
-        loss = loss_atom + self.args.lambda_dist * loss_dist
+        loss = self.args.lambda_atom * loss_atom + self.args.lambda_dist * loss_dist
         self.log("train/total", loss, batch_size=batch.num_graphs, **self.train_log_kwargs)
         self.log("train/atom", loss_atom, batch_size=batch.num_graphs, **self.train_log_kwargs)
         self.log("train/dist", loss_dist, batch_size=batch.num_graphs, **self.train_log_kwargs)

@@ -170,6 +170,7 @@ def get_args():
     add("--prefetch_factor", type=int, default=2, help="Number of worker processes for DataLoader")
     add("--lr", type=float, default=1e-5, help="Learning rate")
     add("--wd", type=float, default=5e-5, help="Weight decay")
+    add("--lambda_atom", type=float, default=1.0, help="Weight for the atom_type predictionloss.")
     add("--lambda_dist", type=float, default=1.0, help="Weight for the distance prediction loss.")
 
     # === Data Config ===   
