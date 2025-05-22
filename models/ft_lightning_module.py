@@ -26,7 +26,7 @@ class FTModule(LightningModule):
                 else:
                     ckpt[k] = v
             self.model.load_state_dict(ckpt)
-            if self.args.freeze_pt:
+            if not self.args.full_ft:
                 for p in self.model.parameters():
                     p.requires_grad_(False)
         else:

@@ -274,7 +274,7 @@ def get_args_ft():
     add("--num_rbf", type=int, default=300, help="Number of RBF kernels for edge encoding")
     add("--cutoff", type=float, default=10.0, help="Distance cutoff for RBF")
     add("--aggr", type=str, default="mean", choices=["mean", "add", "max"], help="Aggregation method in GNN")
-    add("--freeze_pt", type=bool, default=True, help="Freeze pre-trained model parameters")
+    add("--full_ft", action="store_true", default=False, help="Unfreeze pre-trained model parameters and do Full Fine-tuning. (default: False == Linear Probing)")
 
     # === Fusion Model Config ===
     add = add_arg_group(parser, "Fusion Model Config", categories)
