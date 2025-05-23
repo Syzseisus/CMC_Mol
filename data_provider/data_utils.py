@@ -99,7 +99,6 @@ def random_mask(length: int, ratio: float):
     if ratio == 0:
         print("[WARNING] Given ratio is 0, returning all False mask")
         return torch.zeros(length, dtype=torch.bool)
-    assert length > 0, "Length must be greater than 0"
 
     num_mask = max(1, int(length * ratio))
     mask = torch.zeros(length, dtype=torch.bool)
