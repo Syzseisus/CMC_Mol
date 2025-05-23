@@ -151,7 +151,7 @@ def get_args():
     # === Optimization / Training Hyperparameters ===
     add = add_arg_group(parser, "Optimization / Training Hyperparameters", categories)
     add("--max_epochs", type=int, default=100, help="Number of training epochs")
-    add("--batch_size", type=int, default=512, help="Batch size")
+    add("--batch_size", type=int, default=128, help="Batch size")
     add("--num_workers", type=int, default=4, help="Number of worker processes for DataLoader")
     add("--prefetch_factor", type=int, default=2, help="Number of worker processes for DataLoader")
     add("--lr", type=float, default=1e-5, help="Learning rate")
