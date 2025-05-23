@@ -23,11 +23,6 @@ torch.set_float32_matmul_precision("medium")  # More precision trade-off for max
 
 
 def main(args, categories):
-    # ===== Print Args =====
-    formatted = format_args(args, categories)
-    if int(os.environ.get("LOCAL_RANK", 0)) == 0:
-        print(formatted)
-
     # ===== Fix Seed =====
     pl.seed_everything(args.seed, workers=True)
 
@@ -64,7 +59,7 @@ def main(args, categories):
     )
 
     if int(os.environ.get("LOCAL_RANK", 0)) == 0:
-        wandb.termlog(formatted)
+        wandb.termlog(format_args(args, categories))
 
     # ===== Training =====
     trainer.fit(model, datamodule=dm)
