@@ -56,6 +56,7 @@ def main(args, categories):
         log_every_n_steps=args.log_every_n_steps,
         callbacks=[checkpoint, lr_monitor],
         # num_sanity_val_steps=0,
+        check_val_every_n_epoch=5,
     )
 
     if int(os.environ.get("LOCAL_RANK", 0)) == 0:
