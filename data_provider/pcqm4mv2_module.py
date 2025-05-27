@@ -20,7 +20,7 @@ class PCQM4MV2DM(LightningDataModule):
             batch_size=self.batch_size,
             num_workers=self.args.num_workers,
             pin_memory=True,
-            persistent_workers=True,
+            persistent_workers=False,
             prefetch_factor=self.args.prefetch_factor if self.args.num_workers else None,
             timeout=0,
         )
