@@ -1,3 +1,5 @@
+from wandb import Histogram
+
 import torch
 import torch.nn as nn
 from pytorch_lightning import LightningModule
@@ -94,6 +96,9 @@ class FTModule(LightningModule):
         self.valid_log_kwargs = dict(on_epoch=True, sync_dist=True, logger=True)
         self.metric_log_kwargs = dict(on_epoch=True, sync_dist=True, prog_bar=True, logger=True)
 
+        if self.args.log_preds:
+            self.test_preds = []
+            self.test_targets = []
 
     def forward(self, data):
         return self.model(data)
@@ -140,10 +145,55 @@ class FTModule(LightningModule):
         s, v = self(batch)
         g = self.fusion_head(s, v, batch.batch)
         self.test_metric_fn.update(g, batch.y)
+        if self.args.log_preds:
+            self.test_preds.append(g.detach().cpu())
+            self.test_targets.append(batch.y.detach().cpu())
 
     def on_test_epoch_end(self):
         metric = self.test_metric_fn.compute()
         self.log(f"test/{self.metric_name}", metric, **self.metric_log_kwargs)
+        if self.args.log_preds:
+            preds = torch.cat(self.test_preds, dim=0).numpy()
+            targets = torch.cat(self.test_targets, dim=0).numpy()
+            num_labels = preds.shape[1]
+
+            # 전체 예측값 분포 시각화
+            flat_preds = preds.flatten()
+            self.logger.experiment.log(
+                {
+                    "test/pred/whole_mean": flat_preds.mean(),
+                    "test/pred/whole_std": flat_preds.std(),
+                    "test/pred/whole_min": flat_preds.min(),
+                    "test/pred/whole_max": flat_preds.max(),
+                    "test/pred/whole_hist": Histogram(flat_preds),
+                    "test/target/whole_mean": targets.mean(),
+                    "test/target/whole_std": targets.std(),
+                    "test/target/whole_min": targets.min(),
+                    "test/target/whole_max": targets.max(),
+                    "test/target/whole_hist": Histogram(targets),
+                }
+            )
+            # 라벨 별 예측값 분포 시각화
+            for i in range(num_labels):
+                label_preds = preds[:, i]
+                label_targets = targets[:, i]
+                self.logger.experiment.log(
+                    {
+                        f"test/pred/label_{i}_mean": label_preds.mean(),
+                        f"test/pred/label_{i}_std": label_preds.std(),
+                        f"test/pred/label_{i}_min": label_preds.min(),
+                        f"test/pred/label_{i}_max": label_preds.max(),
+                        f"test/pred/label_{i}_hist": Histogram(label_preds),
+                        f"test/target/label_{i}_mean": label_targets.mean(),
+                        f"test/target/label_{i}_std": label_targets.std(),
+                        f"test/target/label_{i}_min": label_targets.min(),
+                        f"test/target/label_{i}_max": label_targets.max(),
+                        f"test/target/label_{i}_hist": Histogram(label_targets),
+                    }
+                )
+            self.test_preds = []
+            self.test_targets = []
+            self.log(f"test/{self.metric_name}_preds", preds, **self.metric_log_kwargs)
 
     def configure_optimizers(self):
         optimizer = torch.optim.AdamW(self.parameters(), lr=self.args.lr, weight_decay=self.args.wd)
