@@ -1,11 +1,54 @@
 import torch
 import torch.nn as nn
-from torchmetrics import MeanSquaredError
 from pytorch_lightning import LightningModule
-from torchmetrics.classification import BinaryAUROC, MultilabelAccuracy
+from torchmetrics import Metric, MeanSquaredError
+from torchmetrics.functional.classification import auroc
 
 from models import CrossModalFT
 from models.modules import build_modular_head
+
+
+class MaskedMultilabelAUROC(Metric):
+    def __init__(self, num_labels, average="macro", thresholds=None, **kwargs):
+        super().__init__(**kwargs)
+        self.num_labels = num_labels
+        self.average = average
+        self.thresholds = thresholds
+
+        self.add_state("preds", default=[], dist_reduce_fx="cat")
+        self.add_state("targets", default=[], dist_reduce_fx="cat")
+
+    def update(self, preds: torch.Tensor, targets: torch.Tensor):
+        """
+        preds: Tensor of shape (N, L), with probabilities or logits.
+        targets: Tensor of shape (N, L), with values 0, 1, or NaN.
+        """
+        self.preds.append(preds.detach())
+        self.targets.append(targets.detach())
+
+    def compute(self):
+        preds = torch.cat(self.preds, dim=0)
+        targets = torch.cat(self.targets, dim=0)
+
+        aucs = []
+        for i in range(self.num_labels):
+            y_true = targets[:, i]
+            y_pred = preds[:, i]
+
+            mask = ~torch.isnan(y_true)
+            if mask.sum() == 0:
+                continue  # skip if no valid labels
+
+            y_true_valid = y_true[mask].long()
+            y_pred_valid = y_pred[mask]
+
+            auc = auroc(y_pred_valid, y_true_valid, task="binary", thresholds=self.thresholds)
+            aucs.append(auc)
+
+        if len(aucs) == 0:
+            return torch.tensor(float("nan"))
+
+        return torch.stack(aucs).mean() if self.average == "macro" else aucs
 
 
 class FTModule(LightningModule):
@@ -42,44 +85,15 @@ class FTModule(LightningModule):
         elif self.args.task_type == "classification":
             self.metric_name = "AUROC"
             self.task_loss_fn = nn.BCEWithLogitsLoss()
-            if self.args.num_classes == 1:
-                self.train_metric_fn = BinaryAUROC()
-                self.valid_metric_fn = BinaryAUROC()
-                self.test_metric_fn = BinaryAUROC()
-            else:
-                self.train_metric_fn = MultilabelAccuracy(num_labels=self.args.num_classes, average="macro")
-                self.valid_metric_fn = MultilabelAccuracy(num_labels=self.args.num_classes, average="macro")
-                self.test_metric_fn = MultilabelAccuracy(num_labels=self.args.num_classes, average="macro")
-
+            self.train_metric_fn = MaskedMultilabelAUROC(num_labels=self.args.num_classes)
+            self.valid_metric_fn = MaskedMultilabelAUROC(num_labels=self.args.num_classes)
+            self.test_metric_fn = MaskedMultilabelAUROC(num_labels=self.args.num_classes)
         else:
             raise ValueError(f"`task_type` must be one of 'regression' or 'classification'. (Got: {self.task_type})")
         self.train_log_kwargs = dict(on_step=True, on_epoch=True, sync_dist=True, prog_bar=True, logger=True)
         self.valid_log_kwargs = dict(on_epoch=True, sync_dist=True, logger=True)
         self.metric_log_kwargs = dict(on_epoch=True, sync_dist=True, prog_bar=True, logger=True)
 
-    #! 수상한 부분 (2/2)
-    def format_outputs_and_targets(self, preds: torch.Tensor, targets: torch.Tensor):
-        """
-        preds: [B, num_tasks]
-        targets: [B, num_tasks]
-        """
-        if self.args.task_type == "classification":
-            if self.args.num_classes == 1:
-                # Binary classification: keep raw logits + float targets
-                targets = targets.float().view(-1)
-                preds = preds.view(-1)  # shape [B]
-                return preds, targets
-            else:
-                # Multiclass classification: use argmax
-                preds = preds.float()
-                targets = targets.float()
-                return preds, targets
-
-        elif self.args.task_type == "regression":
-            return preds, targets.float()
-
-        else:
-            raise ValueError(f"Unsupported task type: {self.args.task_type}")
 
     def forward(self, data):
         return self.model(data)
@@ -94,9 +108,8 @@ class FTModule(LightningModule):
     def training_step(self, batch, batch_idx):
         s, v = self(batch)
         g = self.fusion_head(s, v, batch.batch)  # [B, num_classes]
-        preds, targets = self.format_outputs_and_targets(g, batch.y)
-        loss = self.task_loss_fn(preds, targets)
-        self.train_metric_fn.update(preds, targets)
+        loss = self.task_loss_fn(g, batch.y)
+        self.train_metric_fn.update(g, batch.y)
         self.log("train/loss", loss, batch_size=batch.num_graphs, **self.train_log_kwargs)
         return loss
 
@@ -110,15 +123,13 @@ class FTModule(LightningModule):
     def validation_step(self, batch, batch_idx):
         s, v = self(batch)
         g = self.fusion_head(s, v, batch.batch)
-        preds, targets = self.format_outputs_and_targets(g, batch.y)
-        loss = self.task_loss_fn(preds, targets)
-        self.valid_metric_fn.update(preds, targets)
+        loss = self.task_loss_fn(g, batch.y)
+        self.valid_metric_fn.update(g, batch.y)
         self.log("valid/loss", loss, batch_size=batch.num_graphs, **self.valid_log_kwargs)
         return loss
 
     def on_validation_epoch_end(self):
         metric = self.valid_metric_fn.compute()
-        print(f"[DEBUG] validation {self.metric_name}: {metric}")
         self.log(f"valid/{self.metric_name}", metric, **self.metric_log_kwargs)
         self.log(f"valid_{self.metric_name}", metric, prog_bar=False, **self.valid_log_kwargs)
 
@@ -128,8 +139,7 @@ class FTModule(LightningModule):
     def test_step(self, batch, batch_idx):
         s, v = self(batch)
         g = self.fusion_head(s, v, batch.batch)
-        preds, targets = self.format_outputs_and_targets(g, batch.y)
-        self.test_metric_fn.update(preds, targets)
+        self.test_metric_fn.update(g, batch.y)
 
     def on_test_epoch_end(self):
         metric = self.test_metric_fn.compute()
