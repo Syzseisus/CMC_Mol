@@ -4,10 +4,9 @@ import torch
 import torch.nn as nn
 from torchmetrics import MeanSquaredError
 from pytorch_lightning import LightningModule
-from auroc_w_threshold import BinaryAUROC_withTholdList, MultilabelAUROC_withTholdList
 
 from models import CrossModalFT
-from models.modules import build_modular_head
+from models.modules import GraphCLAUROC, build_modular_head
 
 
 class FTModule(LightningModule):
@@ -44,15 +43,9 @@ class FTModule(LightningModule):
         elif self.args.task_type == "classification":
             self.metric_name = "AUROC"
             self.task_loss_fn = nn.BCEWithLogitsLoss(reduction="none")
-            if self.args.num_classes == 1:
-                self.train_metric_fn = BinaryAUROC_withTholdList(ignore_index=-1)
-                self.valid_metric_fn = BinaryAUROC_withTholdList(ignore_index=-1)
-                self.test_metric_fn = BinaryAUROC_withTholdList(ignore_index=-1)
-            else:
-                kwargs = dict(num_labels=self.args.num_classes, average="macro", ignore_index=-1)
-                self.train_metric_fn = MultilabelAUROC_withTholdList(**kwargs)
-                self.valid_metric_fn = MultilabelAUROC_withTholdList(**kwargs)
-                self.test_metric_fn = MultilabelAUROC_withTholdList(**kwargs)
+            self.train_metric_fn = GraphCLAUROC(self.args.num_classes)
+            self.valid_metric_fn = GraphCLAUROC(self.args.num_classes)
+            self.test_metric_fn = GraphCLAUROC(self.args.num_classes)
         else:
             raise ValueError(f"`task_type` must be one of 'regression' or 'classification'. (Got: {self.task_type})")
         self.train_log_kwargs = dict(on_step=True, on_epoch=True, sync_dist=True, prog_bar=True, logger=True)
@@ -76,19 +69,20 @@ class FTModule(LightningModule):
     def training_step(self, batch, batch_idx):
         s, v = self(batch)
         g = self.fusion_head(s, v, batch.batch)  # [B, num_classes]
-        loss = self.task_loss_fn(g, batch.y)
-        is_valid = ~torch.isnan(batch.y)
-        loss = torch.where(is_valid, loss, torch.zeros_like(loss))
+
+        # BCE는 ignore_index 없어서, 일단 0.5 넣고
+        loss = self.task_loss_fn(g, (batch.y + 1) / 2)
+        is_valid = batch.y**2 > 0
+        loss = torch.where(is_valid, loss, torch.zeros_like(loss))  # 0으로 덮기
         loss = torch.sum(loss) / torch.sum(is_valid)
 
-        target = batch.y.clone()
-        target[~is_valid] = -1
+        target = batch.y.clone().long()  # -1 , 0 (==nan), 1 그대로 넣음
         self.train_metric_fn.update(g, target)
         self.log("train/loss", loss, batch_size=batch.num_graphs, **self.train_log_kwargs)
         return loss
 
     def on_training_epoch_end(self):
-        metric, tholds = self.train_metric_fn.compute()
+        metric, conf_mats, tholds = self.train_metric_fn.compute()
         self.log(f"train/{self.metric_name}", metric, **self.metric_log_kwargs)
 
     def on_validation_epoch_start(self):
@@ -97,19 +91,20 @@ class FTModule(LightningModule):
     def validation_step(self, batch, batch_idx):
         s, v = self(batch)
         g = self.fusion_head(s, v, batch.batch)
-        loss = self.task_loss_fn(g, batch.y)
-        is_valid = ~torch.isnan(batch.y)
-        loss = torch.where(is_valid, loss, torch.zeros_like(loss))
+
+        # BCE는 ignore_index 없어서, 일단 0.5 넣고
+        loss = self.task_loss_fn(g, (batch.y + 1) / 2)
+        is_valid = batch.y**2 > 0
+        loss = torch.where(is_valid, loss, torch.zeros_like(loss))  # 0으로 덮기
         loss = torch.sum(loss) / torch.sum(is_valid)
 
-        target = batch.y.clone()
-        target[~is_valid] = -1
+        target = batch.y.clone().long()  # -1, 0 (==nan), 1 그대로 넣음
         self.valid_metric_fn.update(g, target)
         self.log("valid/loss", loss, batch_size=batch.num_graphs, **self.valid_log_kwargs)
         return loss
 
     def on_validation_epoch_end(self):
-        metric, tholds = self.valid_metric_fn.compute()  # Binary - 1D tensor
+        metric, conf_mats, tholds = self.valid_metric_fn.compute()  # Binary - 1D tensor
         self.log(f"valid/{self.metric_name}", metric, **self.metric_log_kwargs)
         self.log(f"valid_{self.metric_name}", metric, prog_bar=False, **self.valid_log_kwargs)
 
@@ -119,16 +114,15 @@ class FTModule(LightningModule):
     def test_step(self, batch, batch_idx):
         s, v = self(batch)
         g = self.fusion_head(s, v, batch.batch)
-        is_valid = ~torch.isnan(batch.y)
-        target = batch.y.clone()
-        target[~is_valid] = -1
+
+        target = batch.y.clone().long()  # -1, 0 (==nan), 1 그대로 넣음
         self.test_metric_fn.update(g, target)
         if self.args.log_preds:
             self.test_preds.append(g.detach().cpu())
             self.test_targets.append(batch.y.detach().cpu())
 
     def on_test_epoch_end(self):
-        metric, tholds = self.test_metric_fn.compute()
+        metric, conf_mats, tholds = self.test_metric_fn.compute()
         self.log(f"test/{self.metric_name}", metric, **self.metric_log_kwargs)
         if self.args.log_preds:
             preds = torch.cat(self.test_preds, dim=0).numpy()

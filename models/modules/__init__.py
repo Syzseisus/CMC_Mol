@@ -1,4 +1,5 @@
 from models.modules.rbf import RBFEncoder
+from models.modules.graphcl_auroc import GraphCLAUROC
 from models.modules.invariant_gnn import InvariantGNN
 from models.modules.self_attention import SelfAttention
 from models.modules.equivariant_mlp import EquivariantMLP
@@ -7,6 +8,7 @@ from models.modules.fusion_modules import PROJ_MAP, FUSION_MAP, SCALAR_MAP, VECT
 
 __all__ = [
     RBFEncoder,
+    GraphCLAUROC,
     InvariantGNN,
     SelfAttention,
     EquivariantMLP,

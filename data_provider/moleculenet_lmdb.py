@@ -111,6 +111,7 @@ class MoleculeNet_LMDBDataset(Dataset):
             if data_bytes is None:
                 raise KeyError(f"Key {idx} not found in LMDB.")
         data = pickle.loads(data_bytes)
+        data = label_preprocessor(data, self.dataset_name)  # 0, 1, nan => -1, 1, 0
         return data
 
 
