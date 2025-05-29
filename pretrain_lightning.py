@@ -56,7 +56,7 @@ def main(args, categories):
         logger=wandb_logger,
         log_every_n_steps=args.log_every_n_steps,
         callbacks=[checkpoint, lr_monitor],
-        # num_sanity_val_steps=0,
+        num_sanity_val_steps=1,  # validation monitor 잘 되도록
         check_val_every_n_epoch=5,
     )
 
