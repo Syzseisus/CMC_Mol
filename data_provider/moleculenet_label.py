@@ -1,6 +1,7 @@
 import torch
 
 
+# deprecated
 def label_preprocessor(data, dataname):
     """
     MoleculeNet 라벨 전처리:
@@ -17,18 +18,15 @@ def label_preprocessor(data, dataname):
     if not hasattr(data, "y"):
         return data
 
-    if dataname in {"muv", "tox21", "toxcast", "sider", "clintox"}:
+    # esol, freesolv, lipo는 그대로 유지
+    # 나머지는 0 → -1, nan → 0 변환
+    if dataname in {"bbbp", "tox21", "toxcast", "sider", "clintox", "muv", "hiv", "bace"}:
         y = data.y.clone().float()
+        y[y == 0] = -1  # 0 → -1
         y = torch.nan_to_num(y, nan=0.0)  # NaN → 0
         data.y = y
-
-    elif dataname in {"hiv", "bace", "bbbp"}:
-        y = data.y.clone().float()
-        data.y = y  # NaN 없는 binary classification
-
     elif dataname in {"esol", "freesolv", "lipo"}:
-        pass  # regression: 그대로 유지
-
+        pass
     else:
         raise ValueError(f"Unknown dataset name: {dataname}")
 
