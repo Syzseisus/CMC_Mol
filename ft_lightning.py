@@ -44,6 +44,7 @@ def main(args, categories):
     checkpoint = ModelCheckpoint(
         monitor=f"valid_{metric}",
         mode=mode,
+        every_n_epochs=5,
         save_top_k=args.top_k,
         save_last=True,
         filename="{epoch}-{valid_" + metric + ":.4f}",

@@ -250,7 +250,7 @@ def get_args_ft():
 
     # === Trainer / Logging / Callback Config ===
     add = add_arg_group(parser, "Trainer / Logging / Callback Config", categories)
-    add("--top_k", type=int, default=3, help="Top-k checkpoints to keep")
+    add("--top_k", type=int, default=-1, help="Top-k checkpoints to keep")
     add("--log_every_n_steps", type=int, default=1, help="Log every N steps")
     add("--log_preds", action="store_true", default=False, help="Log predictions and targets")
 
