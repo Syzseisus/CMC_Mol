@@ -58,6 +58,7 @@ def main(args, categories):
         callbacks=[checkpoint, lr_monitor],
         num_sanity_val_steps=1,  # validation monitor 잘 되도록
         check_val_every_n_epoch=5,
+        gradient_clip_val=args.clipping,
     )
 
     if int(os.environ.get("LOCAL_RANK", 0)) == 0:
