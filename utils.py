@@ -1,11 +1,13 @@
 import io
 import os
+import glob
 import argparse
 from datetime import datetime
 from zoneinfo import ZoneInfo
 from typing import List, Union, Sequence
 from collections import defaultdict as ddict
 
+import yaml
 import torch
 import torch.distributed as dist
 from torch.utils.data.dataset import Subset
@@ -296,6 +298,63 @@ def get_args_ft():
     args.ckpt_dir = os.path.join(args.save_dir, args.ckpt_folder)
     args.log_dir = os.path.join(args.save_dir, args.log_folder)
     args.lmdb_path = os.path.join(args.root, args.dataset_name, "processed", "lmdb")
+
+    # === Runtime Generated Fields ===
+    registed = {k for v in categories.values() for k in v}
+    runtime = [k for k in vars(args) if k not in registed]
+    categories["Runtime Generated Fields"] = runtime
+
+    return args, categories
+
+
+def get_args_inference():
+    parser = argparse.ArgumentParser()
+    categories = {}
+    # fmt: off
+    # === Project Config ===
+    add = add_arg_group(parser, "Project Config", categories)
+    add("--project", type=str, default="cmc_atom_inference")
+    add("--finetune_dir", type=str, required=True)
+    add("--save_dir", type=str, default="../save")
+    add("--log_folder", type=str, default="log")
+    add("--save_metrics_json", type=str, default=None, help="Path to save aggregated K-Fold metrics as JSON")
+
+    # === Trainer / Logging / Callback Config ===
+    add = add_arg_group(parser, "Trainer / Logging / Callback Config", categories)
+    add("--log_every_n_steps", type=int, default=1, help="Log every N steps")
+    add("--log_preds", action="store_true", default=False, help="Log predictions and targets")
+    # fmt: on
+
+    args = parser.parse_args()
+
+    # === Bring args from finetune_ckpt_dir ===
+    config_path = glob.glob(os.path.join(args.finetune_dir, "log/wandb/run-*", "files/config.yaml"))[0]
+    with open(config_path, "r") as f:
+        config = yaml.load(f, Loader=yaml.FullLoader)
+    for k, v in config.items():
+        if k in {"_wandb", "now", "save_dir", "log_dir"}:
+            # "_wandb": wandb 관련 정보 - 무시
+            # 나머지: 아래서 할당할 예정
+            continue
+        if k not in vars(args):
+            setattr(args, k, v["value"])
+    registed = {k for v in categories.values() for k in v}
+    runtime = [k for k in vars(args) if k not in registed]
+    categories["Finetune Config"] = runtime
+
+    # === Generate `now` only on rank 0 and broadcast to others
+    local_rank = int(os.environ.get("LOCAL_RANK", 0))
+    is_main = local_rank == 0
+    args.now = datetime.now(ZoneInfo("Asia/Seoul")).strftime("%Y%m%d-%H%M%S") if is_main else "none"
+    if dist.is_available() and dist.is_initialized():
+        args.now = broadcast_str(args.now)
+
+    # === Structure output directories
+    args.save_dir = os.path.join(args.save_dir, args.project, f"{args.now}_{args.dataset_name}")
+    args.log_dir = os.path.join(args.save_dir, args.log_folder)
+
+    # === Dataset Config ===
+    categories["Dataset Config"] = ["task_type", "num_classes"]
 
     # === Runtime Generated Fields ===
     registed = {k for v in categories.values() for k in v}

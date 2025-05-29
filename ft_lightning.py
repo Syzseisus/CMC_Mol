@@ -47,7 +47,7 @@ def main(args, categories):
         save_top_k=args.top_k,
         save_last=True,
         filename="{epoch}-{valid_" + metric + ":.4f}",
-        dirpath=args.ckpt_dir,
+        dirpath=os.path.join(args.ckpt_dir, f"fold_{args.fold}"),
     )
     lr_monitor = LearningRateMonitor(logging_interval="step")
 
@@ -98,7 +98,6 @@ if __name__ == "__main__":
     start_time = time.time()
     for k in range(args.k_fold):
         args.fold = k
-        args.save_dir = f"{args.save_dir}_fold_{k}"
         categories.setdefault("Experiment Meta", []).extend(["seed"])
         print(f"\n{f' Fold {k} / {args.k_fold} ':=^80}")
 
