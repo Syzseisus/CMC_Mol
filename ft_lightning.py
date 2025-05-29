@@ -99,7 +99,7 @@ if __name__ == "__main__":
     start_time = time.time()
     for k in range(args.k_fold):
         args.fold = k
-        categories.setdefault("Experiment Meta", []).extend(["seed"])
+        categories.setdefault("Experiment Meta", []).extend(["seed", "fold"])
         print(f"\n{f' Fold {k} / {args.k_fold} ':=^80}")
 
         last_results, best_results = main(args, categories)
