@@ -43,7 +43,7 @@ class FTModule(LightningModule):
             self.test_metric_fn = MeanSquaredError()
         elif self.args.task_type == "classification":
             self.metric_name = "AUROC"
-            self.task_loss_fn = nn.BCEWithLogitsLoss()
+            self.task_loss_fn = nn.BCEWithLogitsLoss(reduction="none")
             if self.args.num_classes == 1:
                 self.train_metric_fn = BinaryAUROC_withTholdList(ignore_index=-1)
                 self.valid_metric_fn = BinaryAUROC_withTholdList(ignore_index=-1)
@@ -77,6 +77,9 @@ class FTModule(LightningModule):
         s, v = self(batch)
         g = self.fusion_head(s, v, batch.batch)  # [B, num_classes]
         loss = self.task_loss_fn(g, batch.y)
+        is_valid = ~torch.isnan(batch.y)
+        loss = torch.where(is_valid, loss, torch.zeros_like(loss))
+        loss = torch.sum(loss) / torch.sum(is_valid)
 
         target = batch.y.clone()
         target[~is_valid] = -1
@@ -95,6 +98,9 @@ class FTModule(LightningModule):
         s, v = self(batch)
         g = self.fusion_head(s, v, batch.batch)
         loss = self.task_loss_fn(g, batch.y)
+        is_valid = ~torch.isnan(batch.y)
+        loss = torch.where(is_valid, loss, torch.zeros_like(loss))
+        loss = torch.sum(loss) / torch.sum(is_valid)
 
         target = batch.y.clone()
         target[~is_valid] = -1
