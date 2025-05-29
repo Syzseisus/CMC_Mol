@@ -52,7 +52,7 @@ class MoleculeNetDataModule(LightningDataModule):
 
         max_retry = 10
         for attempt in range(max_retry):
-            current_seed = self.args.seed + self.args.fold + attempt
+            current_seed = self.args.seed + self.args.fold + (attempt * 13)  # to avoid repeat
             if method == "scaffold":
                 train_idx, valid_idx, test_idx = scaffold_split(full_dataset, seed=current_seed)
             elif method == "random":
