@@ -137,6 +137,7 @@ class FTModule(LightningModule):
 
             # 전체 예측값 분포 시각화
             flat_preds = preds.flatten()
+
             self.logger.experiment.log(
                 {
                     "test/pred/whole_mean": flat_preds.mean(),
@@ -171,7 +172,6 @@ class FTModule(LightningModule):
                 )
             self.test_preds = []
             self.test_targets = []
-            self.log(f"test/{self.metric_name}_preds", preds, **self.metric_log_kwargs)
 
     def configure_optimizers(self):
         optimizer = torch.optim.AdamW(self.parameters(), lr=self.args.lr, weight_decay=self.args.wd)
