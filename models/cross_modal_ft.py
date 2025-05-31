@@ -3,7 +3,7 @@ import torch.nn as nn
 from torch_geometric.data import Data
 from ogb.graphproppred.mol_encoder import AtomEncoder
 
-from models.modules import RBFEncoder, InvariantGNN, SelfAttention, EquivariantMLP
+from models.modules import RBFEncoder, SelfAttention, UnifiedEquivariantGNN
 
 
 def unit_sphere_(tensor: torch.Tensor, alpha: float = 0.01) -> torch.Tensor:
@@ -41,9 +41,8 @@ class CrossModalFT(nn.Module):
 
         self.embed_x = AtomEncoder(self.d_s)
         self.rbf = RBFEncoder(self.num_rbf, self.cutoff, self.d_s)
-        self.s_layers = nn.ModuleList(InvariantGNN(self.d_s, self.aggr) for _ in range(self.layers))
-        self.v_layers = nn.ModuleList(EquivariantMLP(self.d_s, self.d_v) for _ in range(self.layers))
-        self.sa_layers = nn.ModuleList(SelfAttention(self.d_s, self.n_heads) for _ in range(self.layers))
+        self.gnn_layers = nn.ModuleList([UnifiedEquivariantGNN(self.d_s, self.d_v) for _ in range(self.layers)])
+        self.sa_layers = nn.ModuleList([SelfAttention(self.d_s, self.n_heads) for _ in range(self.layers)])
 
     def forward(self, data: Data):
         """
@@ -64,9 +63,8 @@ class CrossModalFT(nn.Module):
         edge_vec_unit = data.edge_vec / (data.edge_len.unsqueeze(-1) + 1e-8)
 
         # 모델 forward
-        for sl, vl, sa in zip(self.s_layers, self.v_layers, self.sa_layers):
-            s = sl(s, data.edge_index, edge_attr)
-            s, v = vl(s, v, data.edge_index, edge_attr, edge_vec_unit)
+        for gnn, sa in zip(self.gnn_layers, self.sa_layers):
+            s, v = gnn(s, v, data.edge_index, edge_attr, edge_vec_unit)
             s = sa(s)
 
         return s, v
