@@ -262,6 +262,7 @@ def get_args_ft():
 
     # === Model Architecture Config ===
     add = add_arg_group(parser, "Model Architecture Config", categories)
+    add("--dropout", type=float, default=0.15, help="Dropout rate")
     add("--d_scalar", type=int, default=256, help="Hidden dimension for scalar features")
     add("--d_vector", type=int, default=256, help="Hidden dimension for vector features")
     add("--num_layers", type=int, default=6, help="Number of GNN layers")

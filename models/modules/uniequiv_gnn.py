@@ -3,14 +3,20 @@ import torch.nn as nn
 
 
 class UnifiedEquivariantGNN(nn.Module):
-    def __init__(self, d_s: int, d_v: int):
+    def __init__(self, d_s: int, d_v: int, dropout: float = 0.0):
         super().__init__()
         # Node feature extractor: 입력 [s, directional projection]
         self.node_gate = nn.Sequential(nn.Linear(d_s + d_v, d_s), nn.SiLU(), nn.Linear(d_s, d_s))
         # Edge feature extractor: 입력 [edge_attr, cross_mag]
         self.edge_gate = nn.Sequential(nn.Linear(d_s + d_v, d_s), nn.SiLU(), nn.Linear(d_s, d_s))
         # Message MLP: 입력 concatenated latent node & edge features
-        self.message_gate = nn.Sequential(nn.Linear(3 * d_s, d_s), nn.SiLU(), nn.Linear(d_s, d_v))
+        # 3d_s → 2d_s → d_s
+        self.message_gate = nn.Sequential(
+            nn.Linear(3 * d_s, 2 * d_s),
+            nn.SiLU(),
+            nn.Dropout(p=dropout),
+            nn.Linear(2 * d_s, d_s),
+        )
         self.update_mlp = nn.Sequential(nn.SiLU(), nn.Linear(d_s, d_s))
         self.norm = nn.LayerNorm(d_s)
 

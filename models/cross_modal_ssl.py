@@ -38,10 +38,13 @@ class CrossModalSSL(nn.Module):
         self.layers = self.args.num_layers
         self.n_heads = self.args.num_attn_heads
         self.alpha = self.args.alpha
+        self.dropout = self.args.dropout
 
         self.embed_x = AtomEncoder(self.d_s)
-        self.rbf = RBFEncoder(self.num_rbf, self.cutoff, self.d_s)
-        self.gnn_layers = nn.ModuleList([UnifiedEquivariantGNN(self.d_s, self.d_v) for _ in range(self.layers)])
+        self.rbf = RBFEncoder(self.num_rbf, self.cutoff, self.d_s, self.dropout)
+        self.gnn_layers = nn.ModuleList(
+            [UnifiedEquivariantGNN(self.d_s, self.d_v, self.dropout) for _ in range(self.layers)]
+        )
         self.sa_layers = nn.ModuleList([SelfAttention(self.d_s, self.n_heads) for _ in range(self.layers)])
 
         self.s_mask_token = nn.Parameter(torch.zeros(self.d_s))

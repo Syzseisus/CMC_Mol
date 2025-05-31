@@ -1,5 +1,6 @@
 from typing import Literal
 from functools import partial
+from argparse import Namespace
 
 import torch
 import torch.nn as nn
@@ -155,8 +156,15 @@ class GateFusionOp(nn.Module):
         assert (
             d_s_emb == d_v_emb
         ), f"Scalar and vector dimensions must match in `GateFusion` (Got s={d_s_emb}, v={d_v_emb})"
+        self.dropout = 0.0
 
-        self.gate_fn = nn.Sequential(nn.Linear((d_s_emb + d_v_emb), d_f), nn.ReLU(), nn.Linear(d_f, d_f), nn.Sigmoid())
+        self.gate_fn = nn.Sequential(
+            nn.Linear(d_s_emb + d_v_emb, d_s_emb + d_v_emb),  # in_dim == hidden_dim
+            nn.SiLU(),
+            nn.Dropout(p=self.dropout),
+            nn.Linear(d_s_emb + d_v_emb, d_f),
+            nn.Sigmoid(),
+        )
         self.out_dim = d_f
 
     def forward(self, s_emb: torch.Tensor, v_emb: torch.Tensor) -> torch.Tensor:
@@ -257,32 +265,40 @@ class LinearProj(nn.Module):
 class FusionHead(nn.Module):
     def __init__(
         self,
+        args: Namespace,
         s_proc_cls: nn.Module,
         v_proc_cls: nn.Module,
         fusion_cls: nn.Module,
         proj_cls: nn.Module,
-        d_s: int,
-        d_v: int,
-        d_f: int,
-        read_out: Literal["mean", "attn"],
         num_classes: int,
     ):
         super().__init__()
-        self.s_proc = s_proc_cls(d_s, d_v, d_f)
-        self.v_proc = v_proc_cls(d_s, d_v, d_f)
-        self.fusion = fusion_cls(self.s_proc.emb_dim, self.v_proc.emb_dim, d_f)
-        self.proj = proj_cls(self.fusion.out_dim, d_f)
+        self.args = args
+        self.d_s = self.args.d_scalar
+        self.d_v = self.args.d_vector
+        self.d_f = self.args.d_fusion
+        self.read_out = self.args.read_out
+        self.num_classes = num_classes
+
+        self.s_proc = s_proc_cls(self.d_s, self.d_v, self.d_f)
+        self.v_proc = v_proc_cls(self.d_s, self.d_v, self.d_f)
+        self.fusion = fusion_cls(self.s_proc.emb_dim, self.v_proc.emb_dim, self.d_f)
+        if hasattr(self.fusion, "dropout"):
+            setattr(self.fusion, "dropout", self.args.dropout)
+        self.proj = proj_cls(self.fusion.out_dim, self.d_f)
 
         if "only" in fusion_cls.__name__.lower():
             print(f"{f' Ablation: {fusion_cls.__name__} ':=^80}")
 
-        if read_out == "mean":
+        if self.read_out == "mean":
             self.pool = global_mean_pool
-        elif read_out == "attn":
-            gate_nn = nn.Sequential(nn.Linear(d_f, d_f), nn.ReLU(), nn.Linear(d_f, 1))
-            self.pool = GlobalAttention(gate_nn)
+        elif self.read_out == "attn":
+            # 논문 그대로
+            gate_nn = nn.Sequential(nn.Linear(self.d_f, 1), nn.Sigmoid())
+            nn = nn.Sequential(nn.Linear(self.d_f, self.d_f))
+            self.pool = GlobalAttention(gate_nn=gate_nn, nn=nn)
 
-        self.mlp = nn.Sequential(nn.Linear(d_f, d_f), nn.SiLU(), nn.Linear(d_f, num_classes))
+        self.mlp = nn.Sequential(nn.Linear(self.d_f, self.d_f), nn.SiLU(), nn.Linear(self.d_f, self.num_classes))
 
     def forward(self, s, v, batch):
         v_emb = self.v_proc(v)
@@ -343,13 +359,10 @@ def build_modular_head(args, num_classes):
     proj_cls = PROJ_MAP[args.proj_cls]
 
     return FusionHead(
+        args=args,
         s_proc_cls=s_proc_cls,
         v_proc_cls=v_proc_cls,
         fusion_cls=fusion_cls,
         proj_cls=proj_cls,
-        d_s=args.d_scalar,
-        d_v=args.d_vector,
-        d_f=args.d_fusion,
-        read_out=args.read_out,
         num_classes=num_classes,
     )
