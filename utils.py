@@ -234,6 +234,8 @@ def get_args_ft():
     # === Optimization / Training Hyperparameters ===
     add = add_arg_group(parser, "Optimization / Training Hyperparameters", categories)
     add("--max_epochs", type=int, default=50, help="Number of training epochs")
+    add("--epoch_freeze", type=int, default=3, help="Number of epochs to freeze the backbone")
+    add("--unfreeze_steps", type=int, default=2, help="Number of epochs to unfreeze the backbone")
     add("--batch_size", type=int, default=256, help="Batch size")
     add("--num_workers", type=int, default=8, help="Number of worker processes for DataLoader")
     add("--prefetch_factor", type=int, default=2, help="Number of worker processes for DataLoader")

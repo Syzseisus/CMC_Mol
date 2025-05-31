@@ -6,6 +6,7 @@ import numpy as np
 
 import torch
 import pytorch_lightning as pl
+from callbacks import GradualUnfreeze
 from pytorch_lightning import Trainer
 from pytorch_lightning.loggers import WandbLogger
 from pytorch_lightning.callbacks import ModelCheckpoint, LearningRateMonitor
@@ -52,6 +53,12 @@ def main(args, categories):
     )
     lr_monitor = LearningRateMonitor(logging_interval="step")
 
+    # ===== Gradual Unfreeze =====
+    graudal_unfreeze = GradualUnfreeze(
+        epoch_freeze=args.epoch_freeze,  # 초기 : backbone freeze
+        unfreeze_steps=args.unfreeze_steps,  # 이후 : 일정 간격으로 block 1개씩 unfreeze
+    )
+
     # ===== Trainer =====
     num_devices = torch.cuda.device_count()
     trainer = Trainer(
@@ -61,7 +68,7 @@ def main(args, categories):
         max_epochs=args.max_epochs,
         logger=wandb_logger,
         log_every_n_steps=args.log_every_n_steps,
-        callbacks=[checkpoint, lr_monitor],
+        callbacks=[checkpoint, lr_monitor, graudal_unfreeze],
         num_sanity_val_steps=1,  # validation monitor 잘 되도록
         gradient_clip_val=args.clipping,
     )
