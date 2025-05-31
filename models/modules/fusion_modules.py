@@ -1,4 +1,5 @@
 from typing import Literal
+from functools import partial
 
 import torch
 import torch.nn as nn
@@ -129,22 +130,6 @@ class ConcatFusionOp(nn.Module):
         return torch.cat([s_emb, v_emb], dim=-1)
 
 
-class GateFusionOp(nn.Module):
-    def __init__(self, d_s_emb: int, d_v_emb: int, d_f: int):
-        super().__init__()
-        assert (
-            d_s_emb == d_v_emb
-        ), f"Scalar and vector dimensions must match in `GateFusion` (Got s={d_s_emb}, v={d_v_emb})"
-
-        self.gate_fn = nn.Sequential(nn.Linear((d_s_emb + d_v_emb), d_f), nn.ReLU(), nn.Linear(d_f, d_f), nn.Sigmoid())
-        self.out_dim = d_f
-
-    def forward(self, s_emb: torch.Tensor, v_emb: torch.Tensor) -> torch.Tensor:
-        h = torch.cat([s_emb, v_emb], dim=-1)
-        g = self.gate_fn(h)
-        return g * s_emb + (1 - g) * v_emb
-
-
 class AttnFusionOp(nn.Module):
     def __init__(self, d_s_emb: int, d_v_emb: int, d_f: int):
         super().__init__()
@@ -162,6 +147,91 @@ class AttnFusionOp(nn.Module):
         tokens = torch.stack([s_emb, v_emb], dim=1)
         attn_out, _ = self.attn(tokens, tokens, tokens)
         return attn_out.sum(dim=1)
+
+
+class GateFusionOp(nn.Module):
+    def __init__(self, d_s_emb: int, d_v_emb: int, d_f: int):
+        super().__init__()
+        assert (
+            d_s_emb == d_v_emb
+        ), f"Scalar and vector dimensions must match in `GateFusion` (Got s={d_s_emb}, v={d_v_emb})"
+
+        self.gate_fn = nn.Sequential(nn.Linear((d_s_emb + d_v_emb), d_f), nn.ReLU(), nn.Linear(d_f, d_f), nn.Sigmoid())
+        self.out_dim = d_f
+
+    def forward(self, s_emb: torch.Tensor, v_emb: torch.Tensor) -> torch.Tensor:
+        h = torch.cat([s_emb, v_emb], dim=-1)
+        g = self.gate_fn(h)
+        return g * s_emb + (1 - g) * v_emb
+
+
+class GMUFusionOp(nn.Module):
+    """
+    Gated Multimodal Units for Information Fusion (https://arxiv.org/pdf/1702.01992)
+    Section 3.1
+    hs = tanh(Ws · s) , hv = tanh(Wv · v)
+    g  = sigmoid(Wg · [s;v])
+    z  = g * hs + (1-g) * hv
+    """
+
+    def __init__(self, d_s_emb: int, d_v_emb: int, d_f: int):
+        super().__init__()
+        self.Ws = nn.Linear(d_s_emb, d_f, bias=False)
+        self.Wv = nn.Linear(d_v_emb, d_f, bias=False)
+        self.Wg = nn.Linear(d_s_emb + d_v_emb, d_f, bias=False)
+        self.out_dim = d_f
+
+    def forward(self, s_emb: torch.Tensor, v_emb: torch.Tensor) -> torch.Tensor:
+        hs = torch.tanh(self.Ws(s_emb))
+        hv = torch.tanh(self.Wv(v_emb))
+        g = torch.sigmoid(self.Wg(torch.cat([s_emb, v_emb], dim=-1)))
+        return g * hs + (1 - g) * hv
+
+
+class MMHighwayFusionOp(nn.Module):
+    """
+    Highway Networks (https://arxiv.org/pdf/1505.00387)
+    Section 2
+    original
+        h = tanh(Wh · [x])
+        t = sigmoid(Wt · [x])
+        y = t * h + (1 - t) * x
+
+    multimodal version
+        h = tanh(Wh · [s;v])
+        g = sigmoid(Wg · [s;v])
+        z = g * h + (1 - g) * (b * s + (1 - b) * v)
+
+    v1. b = 0.5 (constant)
+    v2. b = sigmoid(Wb · [s;v])
+    """
+
+    def __init__(self, d_s_emb: int, d_v_emb: int, d_f: int, version: Literal["v1", "v2"] = "v1"):
+        super().__init__()
+        assert (
+            d_s_emb == d_v_emb
+        ), f"Scalar and vector dimensions must match in `MMHighwayFusion` (Got s={d_s_emb}, v={d_v_emb})"
+        assert (
+            d_s_emb == d_f
+        ), f"Both scalar and vector must have dimension `d_f` in `MMHighwayFusion` (Got s=v={d_s_emb}, d_f={d_f})"
+        self.Wh = nn.Linear(d_s_emb + d_v_emb, d_f)
+        self.Wg = nn.Linear(d_s_emb + d_v_emb, d_f)
+        if version == "v1":
+            self.b = 0.5
+        elif version == "v2":
+            self.Wb = nn.Linear(d_s_emb + d_v_emb, d_f, bias=False)
+        self.out_dim = d_f
+
+    def forward(self, s_emb: torch.Tensor, v_emb: torch.Tensor) -> torch.Tensor:
+        concat = torch.cat([s_emb, v_emb], dim=-1)
+        h = torch.tanh(self.Wh(concat))
+        g = torch.sigmoid(self.Wg(concat))
+        if self.version == "v1":
+            z = g * h + 0.5 * (1 - g) * (s_emb + v_emb)
+        elif self.version == "v2":
+            b = torch.sigmoid(self.Wb(concat))
+            z = g * h + (1 - g) * (b * s_emb + (1 - b) * v_emb)
+        return z
 
 
 # === Projection Layers ===
@@ -245,7 +315,13 @@ FUSION_MAP = {
     "concat": ConcatFusionOp,  # torch.cat([s, v], dim=-1)
     "attn": AttnFusionOp,  # g = MLP(torch.cat([s, v], dim=-1))
     "gate": GateFusionOp,  # t = torch.stack([s, v], dim=1); ATTN(t, t, t).sum(dim=1)
-    # for ablation
+    "gmu": GMUFusionOp,  # hs = tanh(W x s); hv = tanh(W x v); g = sigmoid(W x [s;v]); z = g * hs + (1-g) * hv
+    # === 성능 끌어올리기 위한 발악 ===
+    # h = tanh(Wh · [s;v]); g = sigmoid(Wg · [s;v]); z = g * h + 0.5 * (1 - g) * (s + v)
+    "mm_highway_avg": partial(MMHighwayFusionOp, version="v1"),
+    # h = tanh(Wh · [s;v]); g = sigmoid(Wg · [s;v]); b = sigmoid(Wb · [s;v]); z = g * h + (1 - g) * (b * s + (1 - b) * v)
+    "mm_highway_gate": partial(MMHighwayFusionOp, version="v2"),
+    # === for ablation ===
     "2d_only": Only2D,  # s -> Identity -> (N, d_f). `s`'s shape should be (N, d_f)
     "3d_only": Only3D,  # v -> Identity -> (N, d_f). `v`'s shape should be (N, d_f)
     "simple_mlp": ConcatFusionOp,  # torch.cat([s, v], dim=-1) -> linear -> (N, d_f)
