@@ -1,4 +1,5 @@
 import numpy as np
+from collections import OrderedDict
 
 import torch
 from rdkit import Chem
@@ -6,18 +7,22 @@ from torch_geometric.data import Data
 
 from data_provider.coord_utils import get_coord_augs
 
-allowable_features = {
-    "possible_atomic_num_list": list(range(1, 119)) + ["misc"],
-    "possible_chirality_list": ["CHI_UNSPECIFIED", "CHI_TETRAHEDRAL_CW", "CHI_TETRAHEDRAL_CCW", "CHI_OTHER"],
-    "possible_degree_list": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, "misc"],
-    "possible_formal_charge_list": [-5, -4, -3, -2, -1, 0, 1, 2, 3, 4, 5, "misc"],
-    "possible_numH_list": [0, 1, 2, 3, 4, 5, 6, 7, 8, "misc"],
-    "possible_number_radical_e_list": [0, 1, 2, 3, 4, "misc"],
-    "possible_hybridization_list": ["SP", "SP2", "SP3", "SP3D", "SP3D2", "misc"],
-    "possible_is_aromatic_list": [False, True],
-    "possible_is_in_ring_list": [False, True],
-}
+allowable_features = OrderedDict(
+    [
+        ("possible_atomic_num_list", list(range(1, 119)) + ["misc"]),
+        ("possible_chirality_list", ["CHI_UNSPECIFIED", "CHI_TETRAHEDRAL_CW", "CHI_TETRAHEDRAL_CCW", "CHI_OTHER"]),
+        ("possible_degree_list", [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, "misc"]),
+        ("possible_formal_charge_list", [-5, -4, -3, -2, -1, 0, 1, 2, 3, 4, 5, "misc"]),
+        ("possible_numH_list", [0, 1, 2, 3, 4, 5, 6, 7, 8, "misc"]),
+        ("possible_number_radical_e_list", [0, 1, 2, 3, 4, "misc"]),
+        ("possible_hybridization_list", ["SP", "SP2", "SP3", "SP3D", "SP3D2", "misc"]),
+        ("possible_is_aromatic_list", [False, True]),
+        ("possible_is_in_ring_list", [False, True]),
+    ]
+)
+
 NUM_ATOM_TYPES = len(allowable_features["possible_atomic_num_list"])
+NUM_CLASSES_LIST = [len(v) for v in allowable_features.values()]
 
 
 def safe_index(l, e):

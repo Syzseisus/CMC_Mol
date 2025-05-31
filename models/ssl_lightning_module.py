@@ -1,11 +1,10 @@
 import torch
-import torch.nn as nn
 import torch.nn.functional as F
 from pytorch_lightning import LightningModule
 
 from models import CrossModalSSL
-from data_provider.data_utils import NUM_ATOM_TYPES
-from models.modules import ScalarToDistanceModule, VectorToAtomLogitsModule
+from data_provider.data_utils import allowable_features
+from models.modules import ScalarToBondFeatureModule, VectorToFullAtomFeatureModule
 
 
 class SSLModule(LightningModule):
@@ -14,9 +13,10 @@ class SSLModule(LightningModule):
         self.args = args
         self.save_hyperparameters(args)
         self.model = CrossModalSSL(args)
-        self.head_atom = VectorToAtomLogitsModule(args.d_vector, NUM_ATOM_TYPES)
-        self.head_dist = ScalarToDistanceModule(args.d_scalar)
+        self.head_atom = VectorToFullAtomFeatureModule(args.d_vector, args.dropout)
+        self.head_bond = ScalarToBondFeatureModule(args.d_scalar, args.dropout)
         self.train_log_kwargs = dict(on_step=True, on_epoch=True, sync_dist=True, prog_bar=True, logger=True)
+        self.train_log_kwargs_anal = dict(on_step=True, on_epoch=True, sync_dist=True, prog_bar=False, logger=True)
         self.val_log_kwargs = dict(on_epoch=True, sync_dist=True, logger=True)
 
     def forward(self, data):
@@ -24,27 +24,61 @@ class SSLModule(LightningModule):
 
     def training_step(self, batch, batch_idx):
         s, v = self(batch)
-        pred_atoms = self.head_atom(v)
-        pred_dist = self.head_dist(s, batch.edge_index)
-        loss_atom = F.cross_entropy(pred_atoms[batch.mask_atom], batch.target_atom[batch.mask_atom])
-        loss_dist = F.l1_loss(pred_dist[batch.mask_edge], batch.target_edge_len[batch.mask_edge])
-        loss = self.args.lambda_atom * loss_atom + self.args.lambda_dist * loss_dist
+        atom_logit_list = self.head_atom(v)
+        bond_logit_list = self.head_bond(s, batch.edge_index)
+
+        atom_targets = batch.x
+        bond_targets = [batch.edge_len, batch.edge_type]
+
+        loss_atom_list = []
+        for c, logits in enumerate(atom_logit_list):
+            loss_atom_list.append(F.cross_entropy(logits[batch.mask_atom, c], atom_targets[batch.mask_atom, c]))
+        loss_atom = sum(loss_atom_list) / len(atom_logit_list)
+
+        loss_bond_dist = F.l1_loss(bond_logit_list[0][batch.mask_edge], bond_targets[0][batch.mask_edge])
+        loss_bond_type = F.cross_entropy(bond_logit_list[1][batch.mask_edge], bond_targets[1][batch.mask_edge])
+        loss_bond = self.args.lambda_bond_dist * loss_bond_dist + loss_bond_type
+
+        loss = self.args.lambda_atom * loss_atom + self.args.lambda_bond * loss_bond
+
         self.log("train/total", loss, batch_size=batch.num_graphs, **self.train_log_kwargs)
         self.log("train/atom", loss_atom, batch_size=batch.num_graphs, **self.train_log_kwargs)
-        self.log("train/dist", loss_dist, batch_size=batch.num_graphs, **self.train_log_kwargs)
+        self.log("train/bond", loss_bond, batch_size=batch.num_graphs, **self.train_log_kwargs)
+        for c, loss in enumerate(loss_atom_list):
+            loss_type = list(allowable_features.keys())[c][9:-6]  # extract * from "possible_*_list"
+            self.log(f"train/atom_{loss_type}", loss, batch_size=batch.num_graphs, **self.train_log_kwargs_anal)
+        self.log(f"train/bond_dist", loss_bond_dist, batch_size=batch.num_graphs, **self.train_log_kwargs_anal)
+        self.log(f"train/bond_type", loss_bond_type, batch_size=batch.num_graphs, **self.train_log_kwargs_anal)
 
         return loss
 
     def validation_step(self, batch, batch_idx):
         s, v = self(batch)
-        pred_atoms = self.head_atom(v)
-        pred_dist = self.head_dist(s, batch.edge_index)
-        loss_atom = F.cross_entropy(pred_atoms[batch.mask_atom], batch.target_atom[batch.mask_atom])
-        loss_dist = F.l1_loss(pred_dist[batch.mask_edge], batch.target_edge_len[batch.mask_edge])
-        loss = loss_atom + self.args.lambda_dist * loss_dist
+        atom_logit_list = self.head_atom(v)
+        bond_logit_list = self.head_bond(s, batch.edge_index)
+
+        atom_targets = batch.x
+        bond_targets = [batch.edge_len, batch.edge_type]
+
+        loss_atom_list = []
+        for c, logits in enumerate(atom_logit_list):
+            loss_atom_list.append(F.cross_entropy(logits[batch.mask_atom, c], atom_targets[batch.mask_atom, c]))
+        loss_atom = sum(loss_atom_list) / len(atom_logit_list)
+
+        loss_bond_dist = F.l1_loss(bond_logit_list[0][batch.mask_edge], bond_targets[0][batch.mask_edge])
+        loss_bond_type = F.cross_entropy(bond_logit_list[1][batch.mask_edge], bond_targets[1][batch.mask_edge])
+        loss_bond = self.args.lambda_bond_dist * loss_bond_dist + loss_bond_type
+
+        loss = self.args.lambda_atom * loss_atom + self.args.lambda_bond * loss_bond
+
         self.log("valid/total", loss, batch_size=batch.num_graphs, prog_bar=True, **self.val_log_kwargs)
         self.log("valid/atom", loss_atom, batch_size=batch.num_graphs, **self.val_log_kwargs)
-        self.log("valid/dist", loss_dist, batch_size=batch.num_graphs, **self.val_log_kwargs)
+        self.log("valid/bond", loss_bond, batch_size=batch.num_graphs, **self.val_log_kwargs)
+        for c, loss in enumerate(loss_atom_list):
+            loss_type = list(allowable_features.keys())[c][9:-6]  # extract * from "possible_*_list"
+            self.log(f"valid/atom_{loss_type}", loss, batch_size=batch.num_graphs, **self.val_log_kwargs_anal)
+        self.log(f"valid/bond_dist", loss_bond_dist, batch_size=batch.num_graphs, **self.val_log_kwargs_anal)
+        self.log(f"valid/bond_type", loss_bond_type, batch_size=batch.num_graphs, **self.val_log_kwargs_anal)
         # for monitoring
         self.log("valid_total", loss, batch_size=batch.num_graphs, **self.val_log_kwargs)
 
