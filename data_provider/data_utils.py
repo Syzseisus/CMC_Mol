@@ -20,9 +20,16 @@ allowable_features = OrderedDict(
         ("possible_is_in_ring_list", [False, True]),
     ]
 )
-
 NUM_ATOM_TYPES = len(allowable_features["possible_atomic_num_list"])
 NUM_CLASSES_LIST = [len(v) for v in allowable_features.values()]
+
+allowable_bond_features = OrderedDict(
+    [
+        ("possible_bond_type_list", ["SINGLE", "DOUBLE", "TRIPLE", "AROMATIC", "misc"]),
+        ("possible_bond_stereo_list", ["STEREONONE", "STEREOZ", "STEREOE", "STEREOCIS", "STEREOTRANS", "STEREOANY"]),
+        ("possible_is_conjugated_list", [False, True]),
+    ]
+)
 
 
 def safe_index(l, e):
@@ -46,6 +53,14 @@ def atom_to_feature_vector(atom):
     ]
 
 
+def bond_to_feature_vector(atom):
+    return [
+        safe_index(allowable_bond_features["possible_bond_type_list"], str(atom.GetBondType())),
+        safe_index(allowable_bond_features["possible_bond_stereo_list"], str(atom.GetStereo())),
+        safe_index(allowable_bond_features["possible_is_conjugated_list"], atom.GetIsConjugated()),
+    ]
+
+
 def get_2d_features(mol):
     # node feature
     atom_features_list = []
@@ -57,13 +72,18 @@ def get_2d_features(mol):
     # edge index
     if len(mol.GetBonds()) > 0:
         edge_index = []
+        edge_features_list = []
         for bond in mol.GetBonds():
             i, j = bond.GetBeginAtomIdx(), bond.GetEndAtomIdx()
             edge_index.extend([[i, j], [j, i]])
+            feat = bond_to_feature_vector(bond)
+            edge_features_list.extend([feat, feat])
         edge_index = torch.tensor(edge_index, dtype=torch.long).t().contiguous()
+        edge_features = torch.tensor(edge_features_list, dtype=torch.long)
     else:
         edge_index = torch.empty((2, 0), dtype=torch.long)
-    return x, edge_index
+        edge_features = torch.empty((0,), dtype=torch.long)
+    return x, edge_index, edge_features
 
 
 def random_mask_atom(x, ratio):
@@ -126,7 +146,7 @@ def mol_to_pyg_data_gt(mol) -> Data:
     Convert an RDKit molecule to a PyG Data object with masked SSL features.
     """
     # ===== 공통 2D 정보 =====
-    x, edge_index = get_2d_features(mol)
+    x, edge_index, edge_features = get_2d_features(mol)
     N_atoms = mol.GetNumAtoms()
 
     # ===== GT 좌표 =====
@@ -139,9 +159,11 @@ def mol_to_pyg_data_gt(mol) -> Data:
     # Create Data object; num_nodes/num_motifs can be computed downstream
     data = {
         "x": x,
+        "coord": pos,
         "edge_vec": edge_vec,
         "edge_len": edge_len,
         "edge_index": edge_index,
+        "edge_features": edge_features,
         "target_atom": x[:, 0].clone(),
         "target_edge_len": edge_len.clone(),
         "num_nodes": N_atoms,
@@ -158,7 +180,7 @@ def mol_to_pyg_data_aug_list(mol, num_conf=10, calc_heavy_mol=False) -> Data:
     Convert an RDKit molecule to a PyG Data object with masked SSL features.
     """
     # ===== 공통 2D 정보 =====
-    x, edge_index = get_2d_features(mol)
+    x, edge_index, edge_features = get_2d_features(mol)
     org_atom = [atom.GetSymbol() for atom in mol.GetAtoms()]
     N_atoms = mol.GetNumAtoms()
 
@@ -184,9 +206,11 @@ def mol_to_pyg_data_aug_list(mol, num_conf=10, calc_heavy_mol=False) -> Data:
         data_list.append(
             {
                 "x": x,
+                "coord": pos,
                 "edge_vec": edge_vec,
                 "edge_len": edge_len,
                 "edge_index": edge_index,
+                "edge_features": edge_features,
                 "target_atom": x[:, 0].clone(),
                 "target_edge_len": edge_len.clone(),
                 "num_nodes": N_atoms,
@@ -224,6 +248,7 @@ def add_attr_to_moleculnet(smiles, y) -> Data:
 
     data = Data(
         x=x,
+        coord=pos,
         edge_vec=edge_vec,
         edge_len=edge_len,
         edge_index=edge_index,
