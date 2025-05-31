@@ -1,7 +1,6 @@
-import torch
 import torch.nn as nn
 from torch_geometric.data import Data
-from torch_geometric.nn import scatter_mean
+from torch_scatter import scatter_mean
 from ogb.graphproppred.mol_encoder import AtomEncoder
 
 from models.modules import RBFEncoder, SelfAttention, UnifiedEquivariantGNN
