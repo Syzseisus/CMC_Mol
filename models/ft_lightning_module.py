@@ -2,6 +2,7 @@ from wandb import Histogram
 
 import torch
 import torch.nn as nn
+from torch.optim import lr_scheduler
 from torchmetrics import MeanSquaredError
 from pytorch_lightning import LightningModule
 
@@ -27,9 +28,6 @@ class FTModule(LightningModule):
                 else:
                     ckpt[k] = v
             self.model.load_state_dict(ckpt)
-            if not self.args.full_ft:
-                for p in self.model.parameters():
-                    p.requires_grad_(False)
         else:
             print(f"{' Randomly initialize the model parameters. ':=^80}")
         self.fusion_head = build_modular_head(args, self.args.num_classes)
@@ -168,14 +166,46 @@ class FTModule(LightningModule):
             self.test_targets = []
 
     def configure_optimizers(self):
-        optimizer = torch.optim.AdamW(self.parameters(), lr=self.args.lr, weight_decay=self.args.wd)
-        scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=self.args.max_epochs)
+        # ===== Optimizer =====
+        lr_backbone = self.args.lr
+        lr_head = self.args.lr * 10
+        params_backbone = [p for p in self.model.parameters() if p.requires_grad]
+        params_head = [p for p in self.fusion_head.parameters() if p.requires_grad]
+        if self.args.full_ft:
+            param_groups = [{"params": params_backbone, "lr": lr_backbone}, {"params": params_head, "lr": lr_head}]
+        else:
+            param_groups = [{"params": params_head, "lr": lr_head}]
+            for p in self.model.parameters():
+                p.requires_grad_(False)
 
-        return {
-            "optimizer": optimizer,
-            "lr_scheduler": {
-                "scheduler": scheduler,
-                "interval": "epoch",
-                "monitor": "valid_loss",  # needed if using ReduceLROnPlateau
-            },
-        }
+        optimizer = torch.optim.AdamW(param_groups, weight_decay=self.args.wd)
+
+        # ===== Learning Rate Scheduler =====
+        if self.args.lr_scheduler == "cosine":
+            scheduler = lr_scheduler.CosineAnnealingLR(optimizer, T_max=self.args.max_epochs)
+
+            return {
+                "optimizer": optimizer,
+                "lr_scheduler": {"scheduler": scheduler, "interval": "epoch", "monitor": "valid_loss"},
+            }
+
+        elif self.args.lr_scheduler == "cosine_warmup":
+            steps_per_epoch = self.trainer.estimated_stepping_batches // self.trainer.max_epochs
+            max_steps = self.args.max_epochs * steps_per_epoch
+            warm_steps = int(self.args.warmup_ratio * max_steps)
+
+            def lr_lambda(step):
+                if step < warm_steps:
+                    return step / warm_steps
+                progress = (step - warm_steps) / (max_steps - warm_steps)
+                return 0.5 * (1 + torch.cos(torch.pi * progress))
+
+            scheduler = lr_scheduler.LambdaLR(optimizer, lr_lambda)
+
+            return {
+                "optimizer": optimizer,
+                "lr_scheduler": {"scheduler": scheduler, "interval": "step"},
+            }
+
+        else:
+            raise NotImplementedError(f"Invalid lr_scheduler: {self.args.lr_scheduler}")

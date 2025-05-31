@@ -240,6 +240,8 @@ def get_args_ft():
     add("--num_workers", type=int, default=8, help="Number of worker processes for DataLoader")
     add("--prefetch_factor", type=int, default=2, help="Number of worker processes for DataLoader")
     add("--lr", type=float, default=5e-3, help="Learning rate")
+    add("--lr_scheduler", type=str, default="cosine_warmup", choices=["cosine", "cosine_warmup"], help="Learning rate scheduler")
+    add("--warmup_ratio", type=float, default=0.1, help="Warmup ratio for cosine_warmup")
     add("--wd", type=float, default=5e-5, help="Weight decay")
     add("--clipping", type=float, default=1.0, help="Gradient clipping")
 
