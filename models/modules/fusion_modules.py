@@ -9,7 +9,7 @@ from torch_geometric.nn import GlobalAttention, global_mean_pool
 
 # === Vector Processors ===
 class NormVector(nn.Module):
-    def __init__(self, d_s: int, d_v: int, d_f: int):
+    def __init__(self, d_v: int, d_f: int):
         super().__init__()
         self.emb_dim = d_v
 
@@ -18,7 +18,7 @@ class NormVector(nn.Module):
 
 
 class NormLinearVector(nn.Module):
-    def __init__(self, d_s: int, d_v: int, d_f: int):
+    def __init__(self, d_v: int, d_f: int):
         super().__init__()
         self.emb_dim = d_f
         self.linear = nn.Linear(d_v, d_f)
@@ -29,7 +29,7 @@ class NormLinearVector(nn.Module):
 
 
 class FlattenVector(nn.Module):
-    def __init__(self, d_s: int, d_v: int, d_f: int):
+    def __init__(self, d_v: int, d_f: int):
         super().__init__()
         self.emb_dim = 3 * d_v
 
@@ -38,7 +38,7 @@ class FlattenVector(nn.Module):
 
 
 class FlattenLinearVector(nn.Module):
-    def __init__(self, d_s: int, d_v: int, d_f: int):
+    def __init__(self, d_v: int, d_f: int):
         super().__init__()
         self.emb_dim = d_f
         self.linear = nn.Linear(3 * d_v, d_f)
@@ -49,7 +49,7 @@ class FlattenLinearVector(nn.Module):
 
 
 class DirectionProjVector(nn.Module):
-    def __init__(self, d_s: int, d_v: int, d_f: int):
+    def __init__(self, d_v: int, d_f: int):
         super().__init__()
         self.emb_dim = d_v
         self.w = nn.Parameter(torch.randn(d_v, 3))
@@ -60,7 +60,7 @@ class DirectionProjVector(nn.Module):
 
 
 class DirectionProjLinearVector(nn.Module):
-    def __init__(self, d_s: int, d_v: int, d_f: int):
+    def __init__(self, d_v: int, d_f: int):
         super().__init__()
         self.emb_dim = d_f
 
@@ -72,9 +72,25 @@ class DirectionProjLinearVector(nn.Module):
         return self.linear(v_proj)
 
 
+class DirectionEmbedVector(nn.Module):
+    def __init__(self, d_v: int, d_f: int, dropout: float = 0.0):
+        super().__init__()
+        self.emb_dim = d_f
+
+        self.mlp = nn.Sequential(
+            nn.Linear(3, d_f),
+            nn.SiLU(),
+            nn.Dropout(dropout),
+            nn.Linear(d_f, d_f),
+        )
+
+    def forward(self, v: torch.Tensor) -> torch.Tensor:
+        return self.mlp(v)
+
+
 # === Scalar Processors ===
 class IdentityScalar(nn.Module):
-    def __init__(self, d_s: int, d_v: int, d_f: int):
+    def __init__(self, d_s: int, d_f: int):
         super().__init__()
         self.emb_dim = d_s
         self.identity = nn.Identity()
@@ -84,7 +100,7 @@ class IdentityScalar(nn.Module):
 
 
 class LinearScalar(nn.Module):
-    def __init__(self, d_s: int, d_v: int, d_f: int):
+    def __init__(self, d_s: int, d_f: int):
         super().__init__()
         self.emb_dim = d_f
         self.linear = nn.Linear(d_s, d_f)
@@ -272,13 +288,15 @@ class FusionHead(nn.Module):
         super().__init__()
         self.args = args
         self.d_s = self.args.d_scalar
-        self.d_v = self.args.d_vector
         self.d_f = self.args.d_fusion
         self.read_out = self.args.read_out
         self.num_classes = num_classes
 
-        self.s_proc = SCALAR_MAP[self.args.s_proc_cls](self.d_s, self.d_v, self.d_f)
-        self.v_proc = VECTOR_MAP[self.args.v_proc_cls](self.d_s, self.d_v, self.d_f)
+        self.s_proc = SCALAR_MAP[self.args.s_proc_cls](self.d_s, self.d_f)
+        if self.args.v_proc_cls == "direction_embed":
+            self.v_proc = VECTOR_MAP[self.args.v_proc_cls](1, self.d_f, self.args.dropout)
+        else:
+            self.v_proc = VECTOR_MAP[self.args.v_proc_cls](1, self.d_f)
         if self.args.fusion_cls in {"gate"}:
             self.fusion = FUSION_MAP[self.args.fusion_cls](
                 self.s_proc.emb_dim, self.v_proc.emb_dim, self.d_f, self.args.dropout
@@ -314,6 +332,8 @@ VECTOR_MAP = {
     "flatten_linear": FlattenLinearVector,  # -> flatten -> (N, 3*d_v) -> linear -> (N, d_f)
     "direction_proj": DirectionProjVector,  # -> direction-weighted sum -> (N, d_v)
     "direction_proj_linear": DirectionProjLinearVector,  # -> direction proj -> (N, d_v) -> linear -> (N, d_f)
+    # v를 edge_vec_unit의 평균으로 정의했을 땐 다음 클래스만 사용 (N, 3) -> (N, d_f)
+    "direction_embed": DirectionEmbedVector,
 }
 
 # 2. Scalar Processing

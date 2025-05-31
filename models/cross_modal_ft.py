@@ -1,29 +1,10 @@
 import torch
 import torch.nn as nn
 from torch_geometric.data import Data
+from torch_geometric.nn import scatter_mean
 from ogb.graphproppred.mol_encoder import AtomEncoder
 
 from models.modules import RBFEncoder, SelfAttention, UnifiedEquivariantGNN
-
-
-def unit_sphere_(tensor: torch.Tensor, alpha: float = 0.01) -> torch.Tensor:
-    """
-    In-place initialize the input tensor with random unit vectors on a hypersphere scaled by alpha.
-
-    Args:
-        tensor  : Tensor of shape (..., N) to initialize in-place.
-        alpha   : Scale factor to apply to each unit vector (default: 0.01).
-
-    Returns:
-        The same tensor, now filled with scaled unit vectors.
-    """
-    rand = torch.randn_like(tensor)  # shape (..., N)
-    lengths = rand.norm(dim=-1, keepdim=True)  # shape (..., 1)
-    unit = rand / (lengths + 1e-8)  # shape (..., N)
-
-    with torch.no_grad():
-        tensor.copy_(unit * alpha)
-    return tensor
 
 
 class CrossModalFT(nn.Module):
@@ -34,14 +15,13 @@ class CrossModalFT(nn.Module):
         self.cutoff = self.args.cutoff
         self.aggr = self.args.aggr
         self.d_s = self.args.d_scalar
-        self.d_v = self.args.d_vector
         self.layers = self.args.num_layers
         self.n_heads = self.args.num_attn_heads
         self.alpha = self.args.alpha
 
         self.embed_x = AtomEncoder(self.d_s)
         self.rbf = RBFEncoder(self.num_rbf, self.cutoff, self.d_s)
-        self.gnn_layers = nn.ModuleList([UnifiedEquivariantGNN(self.d_s, self.d_v) for _ in range(self.layers)])
+        self.gnn_layers = nn.ModuleList([UnifiedEquivariantGNN(self.d_s, self.dropout) for _ in range(self.layers)])
         self.sa_layers = nn.ModuleList([SelfAttention(self.d_s, self.n_heads) for _ in range(self.layers)])
 
     def forward(self, data: Data):
@@ -57,10 +37,9 @@ class CrossModalFT(nn.Module):
 
         # 초기 임베딩
         s = self.embed_x(data.x)
-        v = torch.zeros(data.num_nodes, self.d_v, 3, device=s.device)
-        unit_sphere_(v, self.alpha)
         edge_attr = self.rbf(data.edge_len)
         edge_vec_unit = data.edge_vec / (data.edge_len.unsqueeze(-1) + 1e-8)
+        v = scatter_mean(edge_vec_unit, data.edge_index[0], dim=0)  # (N, 3)
 
         # 모델 forward
         for gnn, sa in zip(self.gnn_layers, self.sa_layers):

@@ -182,7 +182,7 @@ def get_args():
     # === Model Architecture Config ===
     add = add_arg_group(parser, "Model Architecture Config", categories)
     add("--d_scalar", type=int, default=256, help="Hidden dimension for scalar features")
-    add("--d_vector", type=int, default=256, help="Hidden dimension for vector features")
+    add("--d_vector", type=int, default=128, help="Hidden dimension for vector features in head")
     add("--num_layers", type=int, default=6, help="Number of GNN layers")
     add("--num_attn_heads", type=int, default=4, help="Number of attention heads")
     add("--num_rbf", type=int, default=300, help="Number of RBF kernels for edge encoding")
@@ -264,7 +264,7 @@ def get_args_ft():
     add = add_arg_group(parser, "Model Architecture Config", categories)
     add("--dropout", type=float, default=0.15, help="Dropout rate")
     add("--d_scalar", type=int, default=256, help="Hidden dimension for scalar features")
-    add("--d_vector", type=int, default=256, help="Hidden dimension for vector features")
+    add("--d_vector", type=int, default=128, help="Hidden dimension for vector features in head")
     add("--num_layers", type=int, default=6, help="Number of GNN layers")
     add("--num_attn_heads", type=int, default=4, help="Number of attention heads")
     add("--num_rbf", type=int, default=300, help="Number of RBF kernels for edge encoding")
