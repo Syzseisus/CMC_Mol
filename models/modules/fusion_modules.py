@@ -20,8 +20,8 @@ class NormVector(nn.Module):
 class NormLinearVector(nn.Module):
     def __init__(self, d_s: int, d_v: int, d_f: int):
         super().__init__()
-        self.linear = nn.Linear(d_v, d_f)
         self.emb_dim = d_f
+        self.linear = nn.Linear(d_v, d_f)
 
     def forward(self, v: torch.Tensor) -> torch.Tensor:
         v_norm = torch.norm(v, dim=-1)
@@ -40,8 +40,8 @@ class FlattenVector(nn.Module):
 class FlattenLinearVector(nn.Module):
     def __init__(self, d_s: int, d_v: int, d_f: int):
         super().__init__()
-        self.linear = nn.Linear(3 * d_v, d_f)
         self.emb_dim = d_f
+        self.linear = nn.Linear(3 * d_v, d_f)
 
     def forward(self, v: torch.Tensor) -> torch.Tensor:
         v_flat = v.view(v.size(0), -1)
@@ -51,8 +51,8 @@ class FlattenLinearVector(nn.Module):
 class DirectionProjVector(nn.Module):
     def __init__(self, d_s: int, d_v: int, d_f: int):
         super().__init__()
-        self.w = nn.Parameter(torch.randn(d_v, 3))
         self.emb_dim = d_v
+        self.w = nn.Parameter(torch.randn(d_v, 3))
 
     def forward(self, v: torch.Tensor) -> torch.Tensor:
         # project each vector by learned directions
@@ -62,9 +62,10 @@ class DirectionProjVector(nn.Module):
 class DirectionProjLinearVector(nn.Module):
     def __init__(self, d_s: int, d_v: int, d_f: int):
         super().__init__()
+        self.emb_dim = d_f
+
         self.w = nn.Parameter(torch.randn(d_v, 3))
         self.linear = nn.Linear(d_v, d_f)
-        self.emb_dim = d_f
 
     def forward(self, v: torch.Tensor) -> torch.Tensor:
         v_proj = (v * self.w.unsqueeze(0)).sum(dim=-1)
@@ -75,8 +76,8 @@ class DirectionProjLinearVector(nn.Module):
 class IdentityScalar(nn.Module):
     def __init__(self, d_s: int, d_v: int, d_f: int):
         super().__init__()
-        self.identity = nn.Identity()
         self.emb_dim = d_s
+        self.identity = nn.Identity()
 
     def forward(self, s: torch.Tensor) -> torch.Tensor:
         return self.identity(s)
@@ -85,8 +86,8 @@ class IdentityScalar(nn.Module):
 class LinearScalar(nn.Module):
     def __init__(self, d_s: int, d_v: int, d_f: int):
         super().__init__()
-        self.linear = nn.Linear(d_s, d_f)
         self.emb_dim = d_f
+        self.linear = nn.Linear(d_s, d_f)
 
     def forward(self, s: torch.Tensor) -> torch.Tensor:
         return self.linear(s)
@@ -141,8 +142,9 @@ class AttnFusionOp(nn.Module):
             d_s_emb == d_f
         ), f"Both scalar and vector must have dimension `d_f` in `AttnFusion` (Got s=v={d_s_emb}, d_f={d_f})"
 
-        self.attn = nn.MultiheadAttention(d_f, num_heads=1, batch_first=True)
         self.out_dim = d_f
+
+        self.attn = nn.MultiheadAttention(d_f, num_heads=1, batch_first=True)
 
     def forward(self, s_emb: torch.Tensor, v_emb: torch.Tensor) -> torch.Tensor:
         tokens = torch.stack([s_emb, v_emb], dim=1)
@@ -151,12 +153,13 @@ class AttnFusionOp(nn.Module):
 
 
 class GateFusionOp(nn.Module):
-    def __init__(self, d_s_emb: int, d_v_emb: int, d_f: int):
+    def __init__(self, d_s_emb: int, d_v_emb: int, d_f: int, dropout: float = 0.0):
         super().__init__()
         assert (
             d_s_emb == d_v_emb
         ), f"Scalar and vector dimensions must match in `GateFusion` (Got s={d_s_emb}, v={d_v_emb})"
-        self.dropout = 0.0
+        self.out_dim = d_f
+        self.dropout = dropout
 
         self.gate_fn = nn.Sequential(
             nn.Linear(d_s_emb + d_v_emb, d_s_emb + d_v_emb),  # in_dim == hidden_dim
@@ -165,7 +168,6 @@ class GateFusionOp(nn.Module):
             nn.Linear(d_s_emb + d_v_emb, d_f),
             nn.Sigmoid(),
         )
-        self.out_dim = d_f
 
     def forward(self, s_emb: torch.Tensor, v_emb: torch.Tensor) -> torch.Tensor:
         h = torch.cat([s_emb, v_emb], dim=-1)
@@ -184,10 +186,11 @@ class GMUFusionOp(nn.Module):
 
     def __init__(self, d_s_emb: int, d_v_emb: int, d_f: int):
         super().__init__()
+        self.out_dim = d_f
+
         self.Ws = nn.Linear(d_s_emb, d_f, bias=False)
         self.Wv = nn.Linear(d_v_emb, d_f, bias=False)
         self.Wg = nn.Linear(d_s_emb + d_v_emb, d_f, bias=False)
-        self.out_dim = d_f
 
     def forward(self, s_emb: torch.Tensor, v_emb: torch.Tensor) -> torch.Tensor:
         hs = torch.tanh(self.Ws(s_emb))
@@ -222,13 +225,15 @@ class MMHighwayFusionOp(nn.Module):
         assert (
             d_s_emb == d_f
         ), f"Both scalar and vector must have dimension `d_f` in `MMHighwayFusion` (Got s=v={d_s_emb}, d_f={d_f})"
+        self.out_dim = d_f
+        self.version = version
+
         self.Wh = nn.Linear(d_s_emb + d_v_emb, d_f)
         self.Wg = nn.Linear(d_s_emb + d_v_emb, d_f)
-        if version == "v1":
+        if self.version == "v1":
             self.b = 0.5
-        elif version == "v2":
+        elif self.version == "v2":
             self.Wb = nn.Linear(d_s_emb + d_v_emb, d_f, bias=False)
-        self.out_dim = d_f
 
     def forward(self, s_emb: torch.Tensor, v_emb: torch.Tensor) -> torch.Tensor:
         concat = torch.cat([s_emb, v_emb], dim=-1)
@@ -263,15 +268,7 @@ class LinearProj(nn.Module):
 
 # === Fusion Head ===
 class FusionHead(nn.Module):
-    def __init__(
-        self,
-        args: Namespace,
-        s_proc_cls: nn.Module,
-        v_proc_cls: nn.Module,
-        fusion_cls: nn.Module,
-        proj_cls: nn.Module,
-        num_classes: int,
-    ):
+    def __init__(self, args: Namespace, num_classes: int):
         super().__init__()
         self.args = args
         self.d_s = self.args.d_scalar
@@ -280,22 +277,22 @@ class FusionHead(nn.Module):
         self.read_out = self.args.read_out
         self.num_classes = num_classes
 
-        self.s_proc = s_proc_cls(self.d_s, self.d_v, self.d_f)
-        self.v_proc = v_proc_cls(self.d_s, self.d_v, self.d_f)
-        self.fusion = fusion_cls(self.s_proc.emb_dim, self.v_proc.emb_dim, self.d_f)
-        if hasattr(self.fusion, "dropout"):
-            setattr(self.fusion, "dropout", self.args.dropout)
-        self.proj = proj_cls(self.fusion.out_dim, self.d_f)
-
-        if "only" in fusion_cls.__name__.lower():
-            print(f"{f' Ablation: {fusion_cls.__name__} ':=^80}")
+        self.s_proc = SCALAR_MAP[self.args.s_proc_cls](self.d_s, self.d_v, self.d_f)
+        self.v_proc = VECTOR_MAP[self.args.v_proc_cls](self.d_s, self.d_v, self.d_f)
+        if self.args.fusion_cls in {"gate"}:
+            self.fusion = FUSION_MAP[self.args.fusion_cls](
+                self.s_proc.emb_dim, self.v_proc.emb_dim, self.d_f, self.args.dropout
+            )
+        else:
+            self.fusion = FUSION_MAP[self.args.fusion_cls](self.s_proc.emb_dim, self.v_proc.emb_dim, self.d_f)
+        self.proj = PROJ_MAP[self.args.proj_cls](self.fusion.out_dim, self.d_f)
 
         if self.read_out == "mean":
             self.pool = global_mean_pool
         elif self.read_out == "attn":
-            # 논문 그대로
-            gate_nn = nn.Sequential(nn.Linear(self.d_f, 1), nn.Sigmoid())
-            nn = nn.Sequential(nn.Linear(self.d_f, self.d_f))
+            # 논문 그대로 구현, `gate_nn`은 내부적으로 softmax 적용됨
+            gate_nn = nn.Linear(self.d_f, 1)
+            nn = nn.Linear(self.d_f, self.d_f)
             self.pool = GlobalAttention(gate_nn=gate_nn, nn=nn)
 
         self.mlp = nn.Sequential(nn.Linear(self.d_f, self.d_f), nn.SiLU(), nn.Linear(self.d_f, self.num_classes))
@@ -348,21 +345,3 @@ PROJ_MAP = {
     "none": IdentityProj,  # INPUT -> Identity -> (N, d_s)
     "linear": LinearProj,  # INPUT -> (N, d_f)
 }
-
-
-def build_modular_head(args, num_classes):
-    # ablation 할라고 넣어둔 거.
-    # 일단은 기본 조합만 사용함.
-    s_proc_cls = SCALAR_MAP[args.s_proc_cls]
-    v_proc_cls = VECTOR_MAP[args.v_proc_cls]
-    fusion_cls = FUSION_MAP[args.fusion_cls]
-    proj_cls = PROJ_MAP[args.proj_cls]
-
-    return FusionHead(
-        args=args,
-        s_proc_cls=s_proc_cls,
-        v_proc_cls=v_proc_cls,
-        fusion_cls=fusion_cls,
-        proj_cls=proj_cls,
-        num_classes=num_classes,
-    )

@@ -3,7 +3,7 @@ from models.modules.graphcl_auroc import GraphCLAUROC
 from models.modules.self_attention import SelfAttention
 from models.modules.uniequiv_gnn import UnifiedEquivariantGNN
 from models.modules.losses import ScalarToDistanceModule, VectorToAtomLogitsModule
-from models.modules.fusion_modules import PROJ_MAP, FUSION_MAP, SCALAR_MAP, VECTOR_MAP, build_modular_head
+from models.modules.fusion_modules import PROJ_MAP, FUSION_MAP, SCALAR_MAP, VECTOR_MAP, FusionHead
 
 __all__ = [
     "RBFEncoder",
@@ -16,5 +16,5 @@ __all__ = [
     "FUSION_MAP",
     "SCALAR_MAP",
     "VECTOR_MAP",
-    "build_modular_head",
+    "FusionHead",
 ]

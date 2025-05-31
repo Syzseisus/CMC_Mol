@@ -7,7 +7,7 @@ from torchmetrics import MeanSquaredError
 from pytorch_lightning import LightningModule
 
 from models import CrossModalFT
-from models.modules import GraphCLAUROC, build_modular_head
+from models.modules import FusionHead, GraphCLAUROC
 
 
 class FTModule(LightningModule):
@@ -30,7 +30,7 @@ class FTModule(LightningModule):
             self.model.load_state_dict(ckpt)
         else:
             print(f"{' Randomly initialize the model parameters. ':=^80}")
-        self.fusion_head = build_modular_head(args, self.args.num_classes)
+        self.fusion_head = FusionHead(args, self.args.num_classes)
         if self.args.task_type == "regression":
             assert self.args.num_classes == 1, f"I got 'regression' as a `task_type`, but multiple `num_classes`."
             self.metric_name = "MSE"
