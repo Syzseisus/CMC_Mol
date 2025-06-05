@@ -4,6 +4,7 @@ from torch_geometric.data import Data
 from torch_scatter import scatter_mean
 from ogb.graphproppred.mol_encoder import AtomEncoder
 
+from models.modules.sphere import unit_sphere_
 from models.modules import RBFEncoder, SelfAttention, UnifiedEquivariantGNN
 
 
@@ -16,7 +17,6 @@ class CrossModalSSL(nn.Module):
         self.d_s = self.args.d_scalar
         self.layers = self.args.num_layers
         self.n_heads = self.args.num_attn_heads
-        self.alpha = self.args.alpha
         self.dropout = self.args.dropout
 
         self.embed_x = AtomEncoder(self.d_s)
@@ -29,6 +29,7 @@ class CrossModalSSL(nn.Module):
         self.v_mask_token = nn.Parameter(torch.zeros(3))
         nn.init.normal_(self.s_mask_token, mean=0.0, std=self.d_s ** (-0.5))  # similar to `AtomEncoder`
         nn.init.normal_(self.e_mask_token, mean=0.0, std=self.d_s ** (-0.5))  # similar to `RBFEncoder`
+        self.v_mask_token = unit_sphere_(self.v_mask_token, alpha=1)
 
     def forward(self, data: Data):
         """
@@ -57,6 +58,21 @@ class CrossModalSSL(nn.Module):
 
         # 마스킹 반영한 초기화
         v = scatter_mean(edge_vec_unit, data.edge_index[0], dim=0)  # (N, 3)
+
+        # 마스킹 반영한 초기화
+        v = scatter_mean(
+            edge_vec_unit,
+            data.edge_index[0],
+            dim=0,
+            dim_size=data.x.shape[0],  # 고립된 노드가 있을 경우 N보다 작아짐
+        )
+
+        # 고립된 노드를 랜덤 단위벡터로 초기화
+        missing = (v.norm(dim=-1) == 0).nonzero(as_tuple=False).view(-1)
+        if missing.numel() > 0:
+            rnd = torch.randn(len(missing), 3, device=v.device)
+            denom = torch.clamp(rnd.norm(dim=-1, keepdim=True), min=1e-8)
+            v[missing] = rnd / denom
 
         # 모델 forward
         for gnn, sa in zip(self.gnn_layers, self.sa_layers):

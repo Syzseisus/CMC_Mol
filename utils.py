@@ -172,7 +172,6 @@ def get_args():
     add("--lmdb_path", type=str, default="/workspace/DATASET/PCQM4M_V2/aug5", help="Path for LMDB folder")
     add("--mask_ratio", type=float, default=0.30, help="Ratio of masked atoms/coords for SSL")
     add("--mask_atom_strat", type=str, default="random", choices=["random", "anti_c_dominant"], help="Masking strategy : random (default) or anti-C dominant")
-    add("--alpha", type=float, default=0.01, help="Scale factor to apply to each unit vector")
     add("--split", type=parse_split, default=0.8, help=parse_split.__doc__)
     add("--limit", type=int, default=None, help="Limit number of data samples")
 
@@ -253,7 +252,6 @@ def get_args_ft():
     add = add_arg_group(parser, "Data Config", categories)
     add("--dataset_name", type=str, default="bbbp", help="MoleculeNet dataset name")
     add("--root", type=str, default="/workspace/DATASET/MoleculeNet/", help="Root directory for dataset storage")
-    add("--alpha", type=float, default=0.01, help="Scale factor to apply to each unit vector")
     add("--limit", type=int, default=None, help="Limit number of data samples")
     add("--target", type=str, default=None, help="Only for QM8 and QM9. Target name")
     add("--split_strat", type=str, default="force_scaffold", choices=["default", "force_scaffold", "force_random"], help="Split strategy : default (default) or force scaffold/random")
