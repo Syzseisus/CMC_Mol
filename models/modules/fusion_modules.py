@@ -310,8 +310,8 @@ class FusionHead(nn.Module):
         elif self.read_out == "attn":
             # 논문 그대로 구현, `gate_nn`은 내부적으로 softmax 적용됨
             gate_nn = nn.Linear(self.d_f, 1)
-            nn = nn.Linear(self.d_f, self.d_f)
-            self.pool = GlobalAttention(gate_nn=gate_nn, nn=nn)
+            mlp = nn.Linear(self.d_f, self.d_f)
+            self.pool = GlobalAttention(gate_nn=gate_nn, nn=mlp)
 
         self.mlp = nn.Sequential(nn.Linear(self.d_f, self.d_f), nn.SiLU(), nn.Linear(self.d_f, self.num_classes))
 
