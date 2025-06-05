@@ -188,7 +188,14 @@ def mol2_3Dcoords(mol, num_conf):
 
 
 # ========== Entry Point ==========
-def get_coord_augs(mol_org, num_conf=10, calc_heavy_mol=False):
+def get_coord_augs(mol_org, num_conf=10, calc_heavy_mol=False, multi_conf=False):
+    if multi_conf:
+        try:
+            return get_coord_augs_fixed(mol_org, num_conf, calc_heavy_mol)
+        except Exception as e:
+            print(f"[ERROR] get_coord_augs_fixed 실패: {e}")
+            return fallback_all_2d(mol_org, num_conf)
+
     mol = Chem.Mol(mol_org)
     if mol.GetNumAtoms() > 400 and not calc_heavy_mol:
         coord_np = mol2_2Dcoords(mol)
@@ -213,4 +220,77 @@ def get_coord_augs(mol_org, num_conf=10, calc_heavy_mol=False):
         "atoms": atom_list,
         "mol": mol,
         "smiles": smiles_list,
+    }
+
+
+# ========== Multi-Conformer ==========
+def get_coord_augs_fixed(mol_org, num_conf=10, calc_heavy_mol=False):
+    mol = Chem.Mol(mol_org)
+    atom_list = [atom.GetSymbol() for atom in mol.GetAtoms()]
+    smiles = Chem.MolToSmiles(mol)
+
+    coord_list, method_list = [], []
+
+    num_2d = 1
+    num_etkdg = (num_conf - num_2d) // 2
+    num_mmff = num_conf - num_2d - num_etkdg  # 홀수일 땐 얘를 한 개 더 많이
+
+    # === MMFF ===
+    mol_mmff = Chem.AddHs(mol)
+    try:
+        mmff_ids = AllChem.EmbedMultipleConfs(mol_mmff, numConfs=num_mmff, randomSeed=42, numThreads=0)
+        AllChem.MMFFOptimizeMoleculeConfs(mol_mmff, maxIters=50, numThreads=0)
+        for cid in mmff_ids:
+            coords = mol_mmff.GetConformer(cid).GetPositions().astype(np.float32)
+            coord_list.append(coords)
+            method_list.append("MMFF")
+    except:
+        print("[WARN] MMFF 생성 실패 → 2D로 대체")
+        return fallback_all_2d(mol, num_conf)
+
+    # === ETKDG ===
+    mol_etkdg = Chem.AddHs(mol)
+    try:
+        params = AllChem.ETKDGv3()
+        params.randomSeed = 0
+        params.numThreads = 0
+        params.maxAttempts = 100
+        etkdg_ids = AllChem.EmbedMultipleConfs(mol_etkdg, numConfs=num_etkdg, params=params)
+        for cid in etkdg_ids:
+            coords = mol_etkdg.GetConformer(cid).GetPositions().astype(np.float32)
+            coord_list.append(coords)
+            method_list.append("ETKDG")
+    except:
+        print("[WARN] ETKDG 생성 실패 → 2D로 대체")
+        return fallback_all_2d(mol, num_conf)
+
+    # === 2D 1개 ===
+    try:
+        mol_2d = Chem.AddHs(Chem.Mol(mol))
+        AllChem.Compute2DCoords(mol_2d)
+        coords = mol_2d.GetConformer().GetPositions().astype(np.float32)
+        coord_list.append(coords)
+        method_list.append("2D")
+    except:
+        print("[WARN] 2D 생성 실패 → 나머지 모두 사용")
+
+    # === 최종 반환 ===
+    assert len(coord_list) == num_conf, f"[ERROR] 좌표 개수 불일치: {len(coord_list)}개"
+    return {
+        "coordinates": coord_list,
+        "methods": method_list,
+        "atoms": [atom_list] * num_conf,
+        "mol": mol,
+        "smiles": [smiles] * num_conf,
+    }
+
+
+def fallback_all_2d(mol, num_conf):
+    coord_2d = mol2_2Dcoords(mol)
+    return {
+        "coordinates": [coord_2d] * num_conf,
+        "methods": ["2D"] * num_conf,
+        "atoms": [[atom.GetSymbol() for atom in mol.GetAtoms()]] * num_conf,
+        "smiles": [Chem.MolToSmiles(mol)] * num_conf,
+        "mol": mol,
     }

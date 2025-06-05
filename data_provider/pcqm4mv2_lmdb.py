@@ -32,6 +32,7 @@ class PCQM4Mv2_LMDBWriter:
         self.idx = args.idx
         self.total_parts = args.total_parts
         self.batch_size = args.batch_size
+        self.multi_conf = args.multi_conf
         self.TOTAL = TOTAL // self.total_parts
 
     def write(self):
@@ -45,7 +46,7 @@ class PCQM4Mv2_LMDBWriter:
                     continue
                 try:
                     data = mol_to_pyg_data_gt(mol)
-                    aug_list = mol_to_pyg_data_aug_list(mol, self.num_conf, self.calc_heavy_mol)
+                    aug_list = mol_to_pyg_data_aug_list(mol, self.num_conf, self.calc_heavy_mol, self.multi_conf)
 
                     buffer.append((f"{count}".encode(), pickle.dumps(data, protocol=4)))
                     count += 1

@@ -175,7 +175,7 @@ def mol_to_pyg_data_gt(mol) -> Data:
     return data
 
 
-def mol_to_pyg_data_aug_list(mol, num_conf=10, calc_heavy_mol=False) -> Data:
+def mol_to_pyg_data_aug_list(mol, num_conf=10, calc_heavy_mol=False, multi_conf=False) -> Data:
     """
     Convert an RDKit molecule to a PyG Data object with masked SSL features.
     """
@@ -185,7 +185,7 @@ def mol_to_pyg_data_aug_list(mol, num_conf=10, calc_heavy_mol=False) -> Data:
     N_atoms = mol.GetNumAtoms()
 
     # ===== Augmentation 좌표 =====
-    res = get_coord_augs(mol, num_conf, calc_heavy_mol)
+    res = get_coord_augs(mol, num_conf, calc_heavy_mol, multi_conf=multi_conf)
     coordinate_list = res["coordinates"]
     method_list = res["methods"]
     atom_list = res["atoms"]
