@@ -6,6 +6,7 @@ import torch.nn as nn
 from torch.optim import lr_scheduler
 from torchmetrics import MeanSquaredError
 from pytorch_lightning import LightningModule
+from torch_geometric.loader import DataLoader
 
 from models import CrossModalFT
 from models.modules import FusionHead, GraphCLAUROC
@@ -54,6 +55,21 @@ class FTModule(LightningModule):
         if self.args.log_preds:
             self.test_preds = []
             self.test_targets = []
+
+    def setup(self, stage: str):
+        if stage == "fit":
+            train_dataset = self.trainer.datamodule.train_dataset
+            loader = DataLoader(train_dataset, batch_size=1000, shuffle=False)
+            labels = [batch.y for batch in loader]
+            y = torch.cat(labels, dim=0).to(self.device)
+
+            y_bin = (y == 1).float()
+            valid = y**2 > 0
+            pos = (y_bin * valid).sum(0)
+            neg = valid.sum(0) - pos
+            pos_weight = (neg / (pos + 1e-4)).clamp(max=100)
+            self.register_buffer("pos_weight", pos_weight)
+            self.task_loss_fn = nn.BCEWithLogitsLoss(pos_weight=self.pos_weight, reduction="none")
 
     def forward(self, data):
         return self.model(data)
