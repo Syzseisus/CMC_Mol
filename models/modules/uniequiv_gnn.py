@@ -88,7 +88,7 @@ class UnifiedEquivariantGNN(nn.Module):
         # 3. Update: apply non-linear transformation and normalization only to scalar
         s = self.norm(s + self.update_mlp(s_out))
         v = v + v_out
-        denom = torch.clamp(torch.norm(v, dim=-1, keepdim=True), min=1e-8)
+        denom = torch.clamp(torch.norm(v, dim=-1, keepdim=True), min=1e-6)
         v = v / denom  # keep unit vector
 
         return s, v

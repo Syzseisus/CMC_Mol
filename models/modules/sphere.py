@@ -14,7 +14,7 @@ def unit_sphere_(tensor: torch.Tensor, alpha: float = 0.01) -> torch.Tensor:
     """
     rand = torch.randn_like(tensor)  # shape (..., N)
     lengths = rand.norm(dim=-1, keepdim=True)  # shape (..., 1)
-    unit = rand / (lengths + 1e-8)  # shape (..., N)
+    unit = rand / (lengths + 1e-6)  # shape (..., N)
 
     with torch.no_grad():
         tensor.copy_(unit * alpha)
