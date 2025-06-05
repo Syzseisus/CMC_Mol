@@ -30,16 +30,19 @@ class SSLModule(LightningModule):
         atom_logit_list = self.head_atom(v)
         bond_logit_list = self.head_bond(s, batch.edge_index)
 
-        atom_targets = batch.x
-        bond_targets = [batch.edge_len, batch.edge_type]
+        atom_targets = batch.x.long()
+        bond_targets = [batch.edge_len.float(), batch.edge_features[:, 0].long()]
 
+        # TODO (CHECK): cross_entropy에 입력되는 logit의 범위 확인
         loss_atom_list = []
         for c, logits in enumerate(atom_logit_list):
-            loss_atom_list.append(F.cross_entropy(logits[batch.mask_atom, c], atom_targets[batch.mask_atom, c]))
+            loss_atom_list.append(F.cross_entropy(logits[batch.mask_atom].squeeze(), atom_targets[batch.mask_atom, c]))
         loss_atom = sum(loss_atom_list) / len(atom_logit_list)
 
-        loss_bond_dist = F.l1_loss(bond_logit_list[0][batch.mask_edge], bond_targets[0][batch.mask_edge])
-        loss_bond_type = F.cross_entropy(bond_logit_list[1][batch.mask_edge], bond_targets[1][batch.mask_edge])
+        loss_bond_dist = F.l1_loss(bond_logit_list[0][batch.mask_edge].squeeze(), bond_targets[0][batch.mask_edge])
+        loss_bond_type = F.cross_entropy(
+            bond_logit_list[1][batch.mask_edge].squeeze(), bond_targets[1][batch.mask_edge]
+        )
         loss_bond = self.args.lambda_bond_dist * loss_bond_dist + loss_bond_type
 
         loss = self.args.lambda_atom * loss_atom + self.args.lambda_bond * loss_bond
@@ -48,7 +51,7 @@ class SSLModule(LightningModule):
         self.log("train/atom", loss_atom, batch_size=batch.num_graphs, **self.train_log_kwargs)
         self.log("train/bond", loss_bond, batch_size=batch.num_graphs, **self.train_log_kwargs)
         for c, loss in enumerate(loss_atom_list):
-            loss_type = list(allowable_features.keys())[c][9:-6]  # extract * from "possible_*_list"
+            loss_type = list(allowable_features.keys())[c][9:-5]  # extract * from "possible_*_list"
             self.log(f"train/atom_{loss_type}", loss, batch_size=batch.num_graphs, **self.train_log_kwargs_anal)
         self.log(f"train/bond_dist", loss_bond_dist, batch_size=batch.num_graphs, **self.train_log_kwargs_anal)
         self.log(f"train/bond_type", loss_bond_type, batch_size=batch.num_graphs, **self.train_log_kwargs_anal)
@@ -60,12 +63,12 @@ class SSLModule(LightningModule):
         atom_logit_list = self.head_atom(v)
         bond_logit_list = self.head_bond(s, batch.edge_index)
 
-        atom_targets = batch.x
-        bond_targets = [batch.edge_len, batch.edge_type]
+        atom_targets = batch.x.long()
+        bond_targets = [batch.edge_len.float(), batch.edge_features[:, 0].long()]
 
         loss_atom_list = []
         for c, logits in enumerate(atom_logit_list):
-            loss_atom_list.append(F.cross_entropy(logits[batch.mask_atom, c], atom_targets[batch.mask_atom, c]))
+            loss_atom_list.append(F.cross_entropy(logits[batch.mask_atom].squeeze(), atom_targets[batch.mask_atom, c]))
         loss_atom = sum(loss_atom_list) / len(atom_logit_list)
 
         loss_bond_dist = F.l1_loss(bond_logit_list[0][batch.mask_edge], bond_targets[0][batch.mask_edge])
@@ -77,11 +80,11 @@ class SSLModule(LightningModule):
         self.log("valid/total", loss, batch_size=batch.num_graphs, prog_bar=True, **self.val_log_kwargs)
         self.log("valid/atom", loss_atom, batch_size=batch.num_graphs, **self.val_log_kwargs)
         self.log("valid/bond", loss_bond, batch_size=batch.num_graphs, **self.val_log_kwargs)
-        for c, loss in enumerate(loss_atom_list):
-            loss_type = list(allowable_features.keys())[c][9:-6]  # extract * from "possible_*_list"
-            self.log(f"valid/atom_{loss_type}", loss, batch_size=batch.num_graphs, **self.val_log_kwargs_anal)
-        self.log(f"valid/bond_dist", loss_bond_dist, batch_size=batch.num_graphs, **self.val_log_kwargs_anal)
-        self.log(f"valid/bond_type", loss_bond_type, batch_size=batch.num_graphs, **self.val_log_kwargs_anal)
+        for c in range(len(loss_atom_list)):
+            loss_type = list(allowable_features.keys())[c][9:-5]  # extract * from "possible_*_list"
+            self.log(f"valid/atom_{loss_type}", loss_atom_list[c], batch_size=batch.num_graphs, **self.val_log_kwargs)
+        self.log(f"valid/bond_dist", loss_bond_dist, batch_size=batch.num_graphs, **self.val_log_kwargs)
+        self.log(f"valid/bond_type", loss_bond_type, batch_size=batch.num_graphs, **self.val_log_kwargs)
         # for monitoring
         self.log("valid_total", loss, batch_size=batch.num_graphs, **self.val_log_kwargs)
 

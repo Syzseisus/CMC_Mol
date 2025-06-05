@@ -161,8 +161,9 @@ def get_args():
     add("--warmup_ratio", type=float, default=0.05, help="Warmup ratio for cosine_warmup")
     add("--wd", type=float, default=5e-5, help="Weight decay")
     add("--clipping", type=float, default=1.0, help="Gradient clipping")
-    add("--lambda_atom", type=float, default=1.0, help="Weight for the atom_type predictionloss.")
-    add("--lambda_dist", type=float, default=1.0, help="Weight for the distance prediction loss.")
+    add("--lambda_atom", type=float, default=1.0, help="Weight for the full atom feature predictionloss.")
+    add("--lambda_bond", type=float, default=1.0, help="Weight for the bond length and type prediction loss.")
+    add("--lambda_bond_dist", type=float, default=0.2, help="Weight for the bond length prediction loss.")
 
     # === Data Config ===   
     add = add_arg_group(parser, "Data Config", categories)
