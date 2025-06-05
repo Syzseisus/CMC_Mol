@@ -1,5 +1,8 @@
+import math
+
 import torch
 import torch.nn.functional as F
+from torch.optim import lr_scheduler
 from pytorch_lightning import LightningModule
 
 from models import CrossModalSSL
@@ -84,13 +87,33 @@ class SSLModule(LightningModule):
 
     def configure_optimizers(self):
         optimizer = torch.optim.AdamW(self.parameters(), lr=self.args.lr, weight_decay=self.args.wd)
-        scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=self.args.max_epochs)
 
-        return {
-            "optimizer": optimizer,
-            "lr_scheduler": {
-                "scheduler": scheduler,
-                "interval": "epoch",
-                "monitor": "valid_loss",  # needed if using ReduceLROnPlateau
-            },
-        }
+        # ===== Learning Rate Scheduler =====
+        if self.args.lr_scheduler == "cosine":
+            scheduler = lr_scheduler.CosineAnnealingLR(optimizer, T_max=self.args.max_epochs)
+
+            return {
+                "optimizer": optimizer,
+                "lr_scheduler": {"scheduler": scheduler, "interval": "epoch", "monitor": "valid_loss"},
+            }
+
+        elif self.args.lr_scheduler == "cosine_warmup":
+            steps_per_epoch = self.trainer.estimated_stepping_batches // self.trainer.max_epochs
+            max_steps = self.args.max_epochs * steps_per_epoch
+            warm_steps = int(self.args.warmup_ratio * max_steps)
+
+            def lr_lambda(step):
+                if step < warm_steps:
+                    return step / warm_steps
+                progress = (step - warm_steps) / (max_steps - warm_steps)
+                return 0.5 * (1 + math.cos(math.pi * progress))
+
+            scheduler = lr_scheduler.LambdaLR(optimizer, lr_lambda)
+
+            return {
+                "optimizer": optimizer,
+                "lr_scheduler": {"scheduler": scheduler, "interval": "step"},
+            }
+
+        else:
+            raise NotImplementedError(f"Invalid lr_scheduler: {self.args.lr_scheduler}")

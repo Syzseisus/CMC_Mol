@@ -1,3 +1,4 @@
+import math
 from wandb import Histogram
 
 import torch
@@ -198,7 +199,7 @@ class FTModule(LightningModule):
                 if step < warm_steps:
                     return step / warm_steps
                 progress = (step - warm_steps) / (max_steps - warm_steps)
-                return 0.5 * (1 + torch.cos(torch.pi * progress))
+                return 0.5 * (1 + math.cos(math.pi * progress))
 
             scheduler = lr_scheduler.LambdaLR(optimizer, lr_lambda)
 
