@@ -166,7 +166,7 @@ def get_args():
     add = add_arg_group(parser, "Data Config", categories)
     add("--root", type=str, default="/workspace/DATASET/PCQM4M_V2/", help="Root directory for dataset storage")
     add("--sdf_name", type=str, default="pcqm4m-v2-train.sdf", help="Name of PCQM4Mv2 SDF file")
-    add("--lmdb_path", type=str, default="/workspace/DATASET/PCQM4M_V2/pcqm4mv2_lmdb_aug_merged", help="Path for LMDB folder")
+    add("--lmdb_path", type=str, default="/workspace/DATASET/PCQM4M_V2/aug5", help="Path for LMDB folder")
     add("--mask_ratio", type=float, default=0.15, help="Ratio of masked atoms/coords for SSL")
     add("--mask_atom_strat", type=str, default="random", choices=["random", "anti_c_dominant"], help="Masking strategy : random (default) or anti-C dominant")
     add("--alpha", type=float, default=0.01, help="Scale factor to apply to each unit vector")

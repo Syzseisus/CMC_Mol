@@ -90,8 +90,14 @@ class PCQM4Mv2_LMDBDataset(Dataset):
         self.lmdb_path = lmdb_path
         self.mask_ratio = mask_ratio
         self.env = lmdb.open(lmdb_path, readonly=True, lock=False)
+
+        # 그래프만 수집
         with self.env.begin() as txn:
-            self.length = int(txn.get("length".encode()).decode())
+            cursor = txn.cursor()
+            self.keys = [k for k, _ in cursor if k not in (b"length",)]
+            self.keys = [k for k in self.keys if k.decode().isdigit()]
+            self.keys.sort(key=lambda k: int(k.decode()))
+        self.length = len(self.keys)
 
     def __len__(self):
         return self.length
@@ -101,6 +107,11 @@ class PCQM4Mv2_LMDBDataset(Dataset):
             data_bytes = txn.get(f"{idx}".encode())
         data = pickle.loads(data_bytes)
         data = Data.from_dict(data)
+
+        if hasattr(data, "edge_features"):
+            if data.edge_index.shape[1] == data.edge_features.shape[0] * 2:
+                data.edge_features = data.edge_features.repeat_interleave(2, dim=0)
+
         return apply_mask(data, self.mask_ratio)
         # `apply_mask`:
         #   - `data.mask_atom` : 마스킹할 원소 인덱스
@@ -137,6 +148,7 @@ if __name__ == "__main__":
     parser.add_argument("--total_parts", type=int, default=5)
     parser.add_argument("--batch_size", type=int, default=1000)
     parser.add_argument("--merge", action="store_true", default=False)
+    parser.add_argument("--multi_conf", action="store_true", default=False)
     args = parser.parse_args()
     # fmt: on
 
