@@ -21,26 +21,6 @@ class UnifiedEquivariantGNN(nn.Module):
         self.update_mlp = nn.Sequential(nn.SiLU(), nn.Linear(d_s, d_s))
         self.norm = nn.LayerNorm(d_s)
 
-        self.blocks = nn.ModuleList(
-            [
-                self.node_gate,
-                self.edge_gate,
-                self.message_gate,
-                self.proj_edge_msg,
-                self.update_mlp,
-                self.norm,
-            ]
-        )
-
-    @property
-    def num_blocks(self):
-        return len(self.blocks)
-
-    def freeze_block(self, indices, freeze: bool = True):
-        for i in indices:
-            for p in self.blocks[i].parameters():
-                p.requires_grad_(not freeze)
-
     def forward(self, s, v, edge_index, edge_attr, edge_vec_unit):
         """
         Args:

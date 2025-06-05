@@ -23,6 +23,16 @@ class CrossModalFT(nn.Module):
         self.rbf = RBFEncoder(self.num_rbf, self.cutoff, self.d_s)
         self.gnn_layers = nn.ModuleList([UnifiedEquivariantGNN(self.d_s, self.dropout) for _ in range(self.layers)])
         self.sa_layers = nn.ModuleList([SelfAttention(self.d_s, self.n_heads) for _ in range(self.layers)])
+        self.blocks = nn.ModuleList([self.embed_x, self.rbf, self.gnn_layers, self.sa_layers])
+
+    @property
+    def num_blocks(self):
+        return len(self.blocks)
+
+    def freeze_block(self, indices, freeze: bool = True):
+        for i in indices:
+            for p in self.blocks[i].parameters():
+                p.requires_grad_(not freeze)
 
     def forward(self, data: Data):
         """
