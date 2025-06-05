@@ -80,6 +80,90 @@ class PCQM4Mv2_LMDBWriter:
             print(f"[DONE] Total {count:,} molecules written to {self.lmdb_path}")
 
 
+class PCQM4Mv2_LMDBWriter_MolCount:
+    """
+    `RDKit.Mol` 객체를 갖고 있는 `.sdf` 파일을 읽어서 LMDB로 만듦.
+    이 객체에는 이미 GT 좌표가 있음.
+    근데 2D에는 GT 좌표가 없으니까, 라이브러리로 생성한 좌표 (`aug`)를 추가해서 보완함.
+    """
+
+    def __init__(self, args):
+        self.sdf_path = args.sdf_path
+        self.lmdb_path = args.lmdb_path
+        os.makedirs(os.path.dirname(self.lmdb_path) or ".", exist_ok=True)
+        self.env = lmdb.open(self.lmdb_path, map_size=1 << 40)
+
+        self.num_conf = args.num_conf
+        self.calc_heavy_mol = args.calc_heavy_mol
+        self.idx = args.idx
+        self.total_parts = args.total_parts
+        self.batch_size = args.batch_size
+        self.multi_conf = args.multi_conf
+        self.TOTAL = TOTAL // self.total_parts
+
+    def write(self):
+        suppl = Chem.SDMolSupplier(self.sdf_path)
+        count = 0
+        buffer = []
+        mol_counter = 0
+        tqdm_accum = 0
+        tqdm_interval = 1000
+
+        pbar = tqdm.tqdm(total=self.TOTAL, desc=f"[Part {self.idx}] Writing molecules", mininterval=2.0)
+        txn = self.env.begin(write=True)
+
+        # TODO: pbar 이상하게 올라감
+        for idx, mol in enumerate(suppl):
+            if mol is None or idx % self.total_parts != self.idx:
+                # 병렬처리하려고 지정해둠.
+                continue
+            try:
+                data = mol_to_pyg_data_gt(mol)
+                aug_list = mol_to_pyg_data_aug_list(mol, self.num_conf, self.calc_heavy_mol, self.multi_conf)
+
+                buffer.append((f"{count}".encode(), pickle.dumps(data, protocol=4)))
+                count += 1
+                for aug in aug_list:
+                    buffer.append((f"{count}".encode(), pickle.dumps(aug, protocol=4)))
+                    count += 1
+
+                mol_counter += 1
+                tqdm_accum += 1
+                if tqdm_accum >= tqdm_interval:
+                    pbar.update(tqdm_accum)
+                    tqdm_accum = 0
+
+                if mol_counter >= self.batch_size:
+                    for k, v in buffer:
+                        txn.put(k, v)
+                    txn.commit()
+                    txn = self.env.begin(write=True)
+                    buffer.clear()
+                    mol_counter = 0
+
+            except Exception as e:
+                print(f"[SKIP] Invalid molecule at index {idx}: {e}")
+                raise e  # for debug
+                # continue  # for real
+
+        # flush remaining
+        if buffer:
+            for k, v in buffer:
+                txn.put(k, v)
+            txn.commit()
+            buffer.clear()
+
+        if tqdm_accum > 0:
+            pbar.update(tqdm_accum)
+        pbar.close()
+
+        # Save total length
+        with self.env.begin(write=True) as txn:
+            txn.put(b"length", str(count).encode())
+
+        print(f"[DONE] Total {count:,} molecules written to {self.lmdb_path}")
+
+
 class PCQM4Mv2_LMDBDataset(Dataset):
     """
     위에 `PCQM4Mv2_LMDBWriter` 클래스로 만든 LMDB 파일을 로드하는 클래스
@@ -149,6 +233,7 @@ if __name__ == "__main__":
     parser.add_argument("--batch_size", type=int, default=1000)
     parser.add_argument("--merge", action="store_true", default=False)
     parser.add_argument("--multi_conf", action="store_true", default=False)
+    parser.add_argument("--pretty_tqdm", action="store_true", default=False)
     args = parser.parse_args()
     # fmt: on
 
@@ -178,7 +263,10 @@ if __name__ == "__main__":
         print(f"[INFO] LMDB 경로   : {args.lmdb_path}")
 
         start = time.time()
-        writer = PCQM4Mv2_LMDBWriter(args)
+        if args.pretty_tqdm:
+            writer = PCQM4Mv2_LMDBWriter_MolCount(args)
+        else:
+            writer = PCQM4Mv2_LMDBWriter(args)
         writer.write()
         elapsed = time.time() - start
         print(f"[DONE] LMDB 저장 완료. 소요 시간: {elapsed/60:.2f}분")
