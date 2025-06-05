@@ -276,8 +276,8 @@ def get_args_ft():
     # === Fusion Model Config ===
     add = add_arg_group(parser, "Fusion Model Config", categories)
     add("--s_proc_cls", type=str, default="linear", choices=SCALAR_MAP.keys(), help="scalar processing을 위한 classs name")
-    add("--v_proc_cls", type=str, default="direction_proj_linear", choices=VECTOR_MAP.keys(), help="vector processing을 위한 classs name")
-    add("--fusion_cls", type=str, default="gate", choices=FUSION_MAP.keys(), help="fusion을 위한 classs name")
+    add("--v_proc_cls", type=str, default="direction_embed", choices=VECTOR_MAP.keys(), help="vector processing을 위한 classs name")
+    add("--fusion_cls", type=str, default="gmu", choices=FUSION_MAP.keys(), help="fusion을 위한 classs name")
     add("--proj_cls", type=str, default="linear", choices=PROJ_MAP.keys(), help="projection을 위한 classs name")
     add("--d_fusion", type=int, default=128, help="Hidden dimension for fusing two modals.")
     add("--read_out", type=str, default="attn", choices=["mean", "attn"], help="Fusion 다음 Node -> Graph ReadOut 방법.")
